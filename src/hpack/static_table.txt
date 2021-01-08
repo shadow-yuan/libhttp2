@@ -1,0 +1,176 @@
+Appendix A.  Static Table Definition
+
+   The static table (see Section 2.3.1) consists in a predefined and
+   unchangeable list of header fields.
+
+   The static table was created from the most frequent header fields
+   used by popular web sites, with the addition of HTTP/2-specific
+   pseudo-header fields (see Section 8.1.2.1 of [HTTP2]).  For header
+   fields with a few frequent values, an entry was added for each of
+   these frequent values.  For other header fields, an entry was added
+   with an empty value.
+
+   Table 1 lists the predefined header fields that make up the static
+   table and gives the index of each entry.
+
+          +-------+-----------------------------+---------------+
+          | Index | Header Name                 | Header Value  |
+          +-------+-----------------------------+---------------+
+          | 1     | :authority                  |               |
+          | 2     | :method                     | GET           |
+          | 3     | :method                     | POST          |
+          | 4     | :path                       | /             |
+          | 5     | :path                       | /index.html   |
+          | 6     | :scheme                     | http          |
+          | 7     | :scheme                     | https         |
+          | 8     | :status                     | 200           |
+          | 9     | :status                     | 204           |
+          | 10    | :status                     | 206           |
+          | 11    | :status                     | 304           |
+          | 12    | :status                     | 400           |
+          | 13    | :status                     | 404           |
+          | 14    | :status                     | 500           |
+          | 15    | accept-charset              |               |
+          | 16    | accept-encoding             | gzip, deflate |
+          | 17    | accept-language             |               |
+          | 18    | accept-ranges               |               |
+          | 19    | accept                      |               |
+          | 20    | access-control-allow-origin |               |
+          | 21    | age                         |               |
+          | 22    | allow                       |               |
+          | 23    | authorization               |               |
+          | 24    | cache-control               |               |
+          | 25    | content-disposition         |               |
+          | 26    | content-encoding            |               |
+          | 27    | content-language            |               |
+          | 28    | content-length              |               |
+          | 29    | content-location            |               |
+          | 30    | content-range               |               |
+          | 31    | content-type                |               |
+          | 32    | cookie                      |               |
+          | 33    | date                        |               |
+          | 34    | etag                        |               |
+          | 35    | expect                      |               |
+          | 36    | expires                     |               |
+          | 37    | from                        |               |
+          | 38    | host                        |               |
+          | 39    | if-match                    |               |
+          | 40    | if-modified-since           |               |
+          | 41    | if-none-match               |               |
+          | 42    | if-range                    |               |
+          | 43    | if-unmodified-since         |               |
+          | 44    | last-modified               |               |
+          | 45    | link                        |               |
+          | 46    | location                    |               |
+          | 47    | max-forwards                |               |
+          | 48    | proxy-authenticate          |               |
+          | 49    | proxy-authorization         |               |
+          | 50    | range                       |               |
+          | 51    | referer                     |               |
+          | 52    | refresh                     |               |
+          | 53    | retry-after                 |               |
+          | 54    | server                      |               |
+          | 55    | set-cookie                  |               |
+          | 56    | strict-transport-security   |               |
+          | 57    | transfer-encoding           |               |
+          | 58    | user-agent                  |               |
+          | 59    | vary                        |               |
+          | 60    | via                         |               |
+          | 61    | www-authenticate            |               |
+          +-------+-----------------------------+---------------+
+
+                       Table 1: Static Table Entries
+
+
+           gRPC static metadata table
+
+          +-------+-----------------------------+---------------+
+          | Index | Header Name                 | Header Value  |
+          +-------+-----------------------------+---------------+
+
+                1  :authority -> (null)
+                2  :method -> GET
+                3  :method -> POST
+                4  :path -> /
+                5  :path -> /index.html
+                6  :scheme -> http
+                7  :scheme -> https
+                8  :status -> 200
+                9  :status -> 204
+                10  :status -> 206
+                11  :status -> 304
+                12  :status -> 400
+                13  :status -> 404
+                14  :status -> 500
+                15  accept-charset -> (null)
+                16  accept-encoding -> gzip, deflate
+                17  accept-language -> (null)
+                18  accept-ranges -> (null)
+                19  accept -> (null)
+                20  access-control-allow-origin -> (null)
+                21  age -> (null)
+                22  allow -> (null)
+                23  authorization -> (null)
+                24  cache-control -> (null)
+                25  content-disposition -> (null)
+                26  content-encoding -> (null)
+                27  content-language -> (null)
+                28  content-length -> (null)
+                29  content-location -> (null)
+                30  content-range -> (null)
+                31  content-type -> (null)
+                32  cookie -> (null)
+                33  date -> (null)
+                34  etag -> (null)
+                35  expect -> (null)
+                36  expires -> (null)
+                37  from -> (null)
+                38  host -> (null)
+                39  if-match -> (null)
+                40  if-modified-since -> (null)
+                41  if-none-match -> (null)
+                42  if-range -> (null)
+                43  if-unmodified-since -> (null)
+                44  last-modified -> (null)
+                45  link -> (null)
+                46  location -> (null)
+                47  max-forwards -> (null)
+                48  proxy-authenticate -> (null)
+                49  proxy-authorization -> (null)
+                50  range -> (null)
+                51  referer -> (null)
+                52  refresh -> (null)
+                53  retry-after -> (null)
+                54  server -> (null)
+                55  set-cookie -> (null)
+                56  strict-transport-security -> (null)
+                57  transfer-encoding -> (null)
+                58  user-agent -> (null)
+                59  vary -> (null)
+                60  via -> (null)
+                61  www-authenticate -> (null)
+                62  grpc-status -> 0
+                63  grpc-status -> 1
+                64  grpc-status -> 2
+                65  grpc-encoding -> identity
+                66  grpc-encoding -> gzip
+                67  grpc-encoding -> deflate
+                68  te -> trailers
+                69  content-type -> application/grpc
+                70  :scheme -> grpc
+                71  :method -> PUT
+                72  accept-encoding -> (null)
+                73  content-encoding -> identity
+                74  content-encoding -> gzip
+                75  lb-cost-bin -> (null)
+                76  grpc-accept-encoding -> identity
+                77  grpc-accept-encoding -> deflate
+                78  grpc-accept-encoding -> identity,deflate
+                79  grpc-accept-encoding -> gzip
+                80  grpc-accept-encoding -> identity,gzip
+                81  grpc-accept-encoding -> deflate,gzip
+                82  grpc-accept-encoding -> identity,deflate,gzip
+                83  accept-encoding -> identity
+                84  accept-encoding -> gzip
+                85  accept-encoding -> identity,gzip
+
