@@ -1,22 +1,6 @@
 #include "src/utils/slice.h"
 #include <assert.h>
 
-class slice_refcount final {
-public:
-    explicit slice_refcount(slice_type type);
-    ~slice_refcount() {}
-
-    slice_refcount(const slice_refcount&) = delete;
-    slice_refcount& operator= (const slice_refcount&) = delete;
-
-    void ref();
-    void unref();
-
-private:
-    std::atomic<int32_t> _refs;
-    slice_type _type;
-};
-
 slice_refcount::slice_refcount(slice_type type) {
     _refs.store(1, std::memory_order_relaxed);
     _type = type;
@@ -167,3 +151,5 @@ std::string slice::to_string() const {
 bool slice::empty() const {
     return (_length == 0);
 }
+
+slice_refcount static_slice_refcount::kStaticSubRefcount(slice_type::STATIC);
