@@ -5,38 +5,17 @@
 #include <atomic>
 #include <string>
 
-class static_slice final {
-public:
-    static_slice(const uint8_t* buf, size_t len);
-    ~static_slice();
+enum slice_type { STATIC, DYNAMIC };
 
-    std::string to_string() const;
-    bool empty() const;
-    size_t size() const;
-    const uint8_t* data() const;
-
-    bool operator == (const static_slice& oth);
-    bool operator != (const static_slice& oth);
-
-    bool operator == (const std::string& str);
-    bool operator != (const std::string& str);
-
-private:
-    const uint8_t* _ptr;
-    size_t _len;
-};
-
-// ---------------------------------
 class slice_refcount;
 class slice final
 {
 public:
-    slice(const void* ptr, size_t length);
-    slice(const char* str);
+    slice(const void* ptr, size_t length, slice_type t = slice_type::DYNAMIC);
+    slice(const char* str, slice_type t = slice_type::DYNAMIC);
 
     slice(const slice& oth);
     slice& operator= (const slice& oth);
-
 
     slice();
     ~slice();

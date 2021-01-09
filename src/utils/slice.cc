@@ -1,55 +1,9 @@
 #include "src/utils/slice.h"
 #include <assert.h>
 
-static_slice::static_slice(const uint8_t* buf, size_t len)
-    : _ptr(buf)
-    , _len(len) {
-}
-
-static_slice::~static_slice()
-{
-}
-
-std::string static_slice::to_string() const {
-    if (_len == 0) return std::string();
-    return std::string(reinterpret_cast<const char*>(_ptr), _len);
-}
-
-bool static_slice::empty() const {
-    return _len == 0;
-}
-
-size_t static_slice::size() const {
-    return _len;
-}
-
-const uint8_t* static_slice::data() const {
-    return _ptr;
-}
-
-bool static_slice::operator == (const static_slice& oth) {
-    std::string s1 = to_string();
-    std::string s2 = oth.to_string();
-    return s1 == s2;
-}
-
-bool static_slice::operator != (const static_slice& oth) {
-    return !(this->operator== (oth));
-}
-
-bool static_slice::operator == (const std::string& str) {
-    std::string s = to_string();
-    return s == str;
-}
-
-bool static_slice::operator != (const std::string& str) {
-    return !(this->operator== (str));
-}
-
-// ---------------------------------
 class slice_refcount final {
 public:
-    slice_refcount();
+    explicit slice_refcount(slice_type type);
     ~slice_refcount() {}
 
     slice_refcount(const slice_refcount&) = delete;
@@ -60,10 +14,12 @@ public:
 
 private:
     std::atomic<int32_t> _refs;
+    slice_type _type;
 };
 
-slice_refcount::slice_refcount() {
+slice_refcount::slice_refcount(slice_type type) {
     _refs.store(1, std::memory_order_relaxed);
+    _type = type;
 }
 
 void slice_refcount::ref() {
@@ -77,7 +33,7 @@ void slice_refcount::unref() {
     }
 }
 
-slice::slice(const void* ptr, size_t length) {
+slice::slice(const void* ptr, size_t length, slice_type t) {
     if (length == 0) {  // empty object
         _refs = nullptr;
         _bytes = nullptr;
@@ -86,6 +42,13 @@ slice::slice(const void* ptr, size_t length) {
     }
 
     assert(ptr);
+
+    if (t == slice_type::STATIC) {
+        _refs = new slice_refcount(t);
+        _bytes = (uint8_t*)(ptr);
+        _length = length;
+        return;
+    }
 
     /*  Memory layout used by the slice created here:
 
@@ -98,7 +61,7 @@ slice::slice(const void* ptr, size_t length) {
     */
 
     _refs = (slice_refcount*)new uint8_t[(sizeof(slice_refcount) + length)];
-    new (_refs) slice_refcount();
+    new (_refs) slice_refcount(t);
     _length = length;
     _bytes = reinterpret_cast<uint8_t*>(_refs + 1);
     if (ptr) {
@@ -106,8 +69,8 @@ slice::slice(const void* ptr, size_t length) {
     }
 }
 
-slice::slice(const char* str)
-    : slice(static_cast<const void*>(str), strlen(str)) {
+slice::slice(const char* str, slice_type t)
+    : slice(static_cast<const void*>(str), strlen(str), t) {
 }
 
 slice::slice()
