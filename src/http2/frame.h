@@ -1,4 +1,5 @@
 #pragma once
+#include <stdint.h>
 
 enum http2_frame_type{
     /**
@@ -60,10 +61,18 @@ enum http2_frame_type{
     /**
      *  The WINDOW_UPDATE frame is used to implement flow control;
     */
-    HTTP2_FRAME_WINDOW_UPDATE = 0x9,
+    HTTP2_FRAME_WINDOW_UPDATE = 0x8,
+    /**
+     * The CONTINUATION frame is used to continue a sequence of
+     *  header block fragments . Any number of CONTINUATION
+     *  frames can be sent, as long as the preceding frame is on the same
+     *  stream and is a HEADERS, PUSH_PROMISE, or CONTINUATION frame without
+     *  the END_HEADERS flag set.
+    */
+    HTTP2_FRAME_CONTINUATION = 0x9,
 };
 
-enum http2_frame_flag {
+enum http2_frame_flags {
     /**
      * When set, bit 0 indicates that this frame is the
      *  last that the endpoint will send for the identified stream.
@@ -85,4 +94,29 @@ enum http2_frame_flag {
      *   (E), Stream Dependency, and Weight fields are present;
     */
     HTTP2_FLAG_PRIORITY = 0x20,
+
+    /**
+     * no flag.
+    */
+    HTTP2_FLAG_NONE = 0x0,
+};
+
+class http2_frame{
+public:
+    virtual ~http2_frame();
+    http2_frame_type get_frame_type() const {
+        return _frame_type;
+    };
+    http2_frame_flags get_frame_flag() const {
+        return _frame_flag;
+    }
+
+    virtual bool parse_data(const int8_t* data,size_t len) = 0;
+
+    static bool convert_flag(int8_t data,http2_frame_flags& flag);
+protected:
+    explicit http2_frame(http2_frame_type type,http2_frame_flags flag);
+private:
+    http2_frame_type _frame_type;
+    http2_frame_flags _frame_flag;
 };
