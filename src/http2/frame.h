@@ -1,5 +1,6 @@
 #pragma once
 #include <stdint.h>
+#include <vector>
 
 enum http2_frame_type{
     /**
@@ -103,8 +104,8 @@ enum http2_frame_flags {
 
 struct http2_frame_head{
     uint32_t payload_length;
-    uint8_t frame_type;
-    uint8_t frame_flag;
+    uint8_t type;
+    uint8_t flag;
     uint32_t stream_id;
 };
 
@@ -116,9 +117,83 @@ struct http2_frame_data{
     const uint8_t* pad_data;
 };
 
+struct http2_frame_headers{
+    http2_frame_head head;
+    uint32_t stream_id;
+    uint8_t weight;
+    uint32_t header_block_len;
+    const uint8_t* header_block_fragment;
+    uint8_t pad_len;
+    const uint8_t* pad_data;
+};
+
+struct http2_frame_priority{
+    http2_frame_head head;
+    uint32_t stream_id;
+    uint8_t weight;
+};
+
+struct http2_frame_rst_stream{
+    http2_frame_head head;
+    uint32_t error_code;
+};
+
+struct http2_settings_entry{
+    uint16_t id;
+    uint32_t value;
+};
+
+struct http2_frame_settings{
+    http2_frame_head head;
+    size_t count;
+    http2_settings_entry* setting;
+};
+
+struct http2_frame_push_promise{
+    http2_frame_head head;
+    uint32_t promised_stream_id;
+    uint32_t header_block_len;
+    const uint8_t* header_block_fragment;
+    uint8_t pad_len;
+    const uint8_t* pad_data;
+};
+
+struct http2_frame_ping{
+    http2_frame_head head;
+    uint64_t data;
+};
+
+struct http2_frame_goaway{
+    http2_frame_head head;
+    uint32_t last_stream_id;
+    uint32_t error_code;
+    uint32_t data_len;
+    const uint8_t* data;
+};
+
+struct http2_frame_window_update{
+    http2_frame_head head;
+    uint32_t size;
+};
+
+struct http2_frame_continuation{
+    http2_frame_head head;
+    uint32_t header_block_len;
+    const uint8_t* header_block_fragment;
+};
+
 struct http2_frame{
     union {
         http2_frame_head head;
         http2_frame_data data;
+        http2_frame_headers headers;
+        http2_frame_priority priority;
+        http2_frame_rst_stream rst_stream;
+        http2_frame_settings settings;
+        http2_frame_push_promise promise;
+        http2_frame_ping ping;
+        http2_frame_goaway goaway;
+        http2_frame_window_update window_update;
+        http2_frame_continuation continuation;
     };
 };
