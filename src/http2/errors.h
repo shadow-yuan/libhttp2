@@ -45,7 +45,7 @@ enum http2_errors {
     * The endpoint refused the stream prior to
     *  performing any application processing.
     */
-    HTTP2_REFUSED_ERROR = 0x7,
+    HTTP2_REFUSED_STREAM_ERROR = 0x7,
     /**
     * Used by the endpoint to indicate that the stream is no
     *  longer needed.

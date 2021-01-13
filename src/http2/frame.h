@@ -101,22 +101,24 @@ enum http2_frame_flags {
     HTTP2_FLAG_NONE = 0x0,
 };
 
-class http2_frame{
-public:
-    virtual ~http2_frame();
-    http2_frame_type get_frame_type() const {
-        return _frame_type;
+struct http2_frame_head{
+    uint32_t payload_length;
+    uint8_t frame_type;
+    uint8_t frame_flag;
+    uint32_t stream_id;
+};
+
+struct http2_frame_data{
+    http2_frame_head head;
+    uint32_t data_len;
+    const uint8_t* data;
+    uint8_t pad_len;
+    const uint8_t* pad_data;
+};
+
+struct http2_frame{
+    union {
+        http2_frame_head head;
+        http2_frame_data data;
     };
-    http2_frame_flags get_frame_flag() const {
-        return _frame_flag;
-    }
-
-    virtual bool parse_data(const int8_t* data,size_t len) = 0;
-
-    static bool convert_flag(int8_t data,http2_frame_flags& flag);
-protected:
-    explicit http2_frame(http2_frame_type type,http2_frame_flags flag);
-private:
-    http2_frame_type _frame_type;
-    http2_frame_flags _frame_flag;
 };
