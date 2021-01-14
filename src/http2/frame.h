@@ -1,13 +1,6 @@
 #pragma once
 #include <stdint.h>
-
-uint16_t to_ui16(const uint8_t *v);
-uint32_t to_ui32(const uint8_t *v);
-uint64_t to_ui64(const uint8_t *v);
-uint8_t head_bit(uint8_t v);
-uint8_t head_bit(uint16_t v);
-uint8_t head_bit(uint32_t v);
-void rm_head_bit(uint32_t &v);
+#include "src/utils/slice.h"
 
 enum http2_frame_type {
     /**
@@ -118,20 +111,16 @@ struct http2_frame_head {
 
 struct http2_frame_data {
     http2_frame_head head;
-    uint32_t data_len;
-    const uint8_t *data;
     uint8_t pad_len;
-    const uint8_t *pad_data;
+    slice data;
 };
 
 struct http2_frame_headers {
     http2_frame_head head;
+    uint8_t pad_len;
     uint32_t stream_id;
     uint8_t weight;
-    uint32_t header_block_len;
-    const uint8_t *header_block_fragment;
-    uint8_t pad_len;
-    const uint8_t *pad_data;
+    slice header_block_fragment;
 };
 
 struct http2_frame_priority {
@@ -153,16 +142,14 @@ struct http2_settings_entry {
 struct http2_frame_settings {
     http2_frame_head head;
     size_t count;
-    http2_settings_entry *setting;
+    http2_settings_entry *settings;
 };
 
 struct http2_frame_push_promise {
     http2_frame_head head;
-    uint32_t promised_stream_id;
-    uint32_t header_block_len;
-    const uint8_t *header_block_fragment;
     uint8_t pad_len;
-    const uint8_t *pad_data;
+    uint32_t promised_stream_id;
+    slice header_block_fragment;
 };
 
 struct http2_frame_ping {
@@ -174,8 +161,7 @@ struct http2_frame_goaway {
     http2_frame_head head;
     uint32_t last_stream_id;
     uint32_t error_code;
-    uint32_t data_len;
-    const uint8_t *data;
+    slice data;
 };
 
 struct http2_frame_window_update {
@@ -185,8 +171,7 @@ struct http2_frame_window_update {
 
 struct http2_frame_continuation {
     http2_frame_head head;
-    uint32_t header_block_len;
-    const uint8_t *header_block_fragment;
+    slice header_block_fragment;
 };
 
 struct http2_frame {
@@ -204,3 +189,10 @@ struct http2_frame {
         http2_frame_continuation continuation;
     };
 };
+
+void http2_free_frame(http2_frame *frame);
+
+uint8_t head_bit(uint8_t v);
+uint8_t head_bit(uint16_t v);
+uint8_t head_bit(uint32_t v);
+void rm_head_bit(uint32_t &v);

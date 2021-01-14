@@ -1,4 +1,5 @@
 #include "src/http2/parser.h"
+#include "src/utils/byte_convert.h"
 
 #pragma pack(push, 1)
 struct http2_internal_frame_header {
@@ -40,23 +41,20 @@ http2_errors parse_data(size_t offset, const uint8_t *data, size_t len, http2_fr
         +---------------------------------------------------------------+
     */
     frame->data.pad_len = 0;
-    frame->data.data_len = 0;
     if (frame->head.flag == HTTP2_FLAG_PADDED) {
         frame->data.pad_len = *(data + offset);
         if (frame->data.pad_len >= frame->head.payload_length) {
             return HTTP2_PROTOCOL_ERROR;
         }
     }
+    size_t data_len = 0;
     if (frame->data.pad_len == 0) {
-        frame->data.data_len = frame->head.payload_length;
+        data_len = frame->head.payload_length;
     } else {
         offset += sizeof(uint8_t);
-        frame->data.data_len = frame->head.payload_length - frame->data.pad_len - 1;
+        data_len = frame->head.payload_length - frame->data.pad_len - 1;
     }
-    frame->data.data = data + offset;
-    if (frame->data.pad_len > 0) {
-        frame->data.pad_data = data + offset + frame->data.data_len;
-    }
+    frame->data.data = slice(void *(data + offset), data_len, slice::STATIC);
 
     return HTTP2_NO_ERROR;
 }
@@ -76,7 +74,7 @@ http2_errors parse_headers(size_t offset, const uint8_t *data, size_t len, http2
         +---------------------------------------------------------------+
     */
     frame->headers.pad_len = 0;
-    frame->headers.header_block_len = frame->head.payload_length;
+    size_t block_len = frame->head.payload_length;
     frame->headers.stream_id = 0;
     frame->headers.weight = 0;
     switch (frame->head.flag) {
@@ -86,24 +84,21 @@ http2_errors parse_headers(size_t offset, const uint8_t *data, size_t len, http2
             return HTTP2_PROTOCOL_ERROR;
         }
         offset += sizeof(uint8_t);
-        frame->headers.header_block_len -= sizeof(uint8_t) + frame->headers.pad_len;
+        block_len -= sizeof(uint8_t) + frame->headers.pad_len;
     } break;
     case HTTP2_FLAG_PRIORITY: {
-        frame->headers.stream_id = to_ui32(data + offset);
+        frame->headers.stream_id = get_uint32_from_byte(data + offset);
         offset += sizeof(uint32_t);
-        frame->headers.header_block_len -= sizeof(uint32_t);
+        block_len -= sizeof(uint32_t);
         frame->headers.weight = *(data + offset);
         offset += sizeof(uint8_t);
-        frame->headers.header_block_len -= sizeof(uint8_t);
+        block_len -= sizeof(uint8_t);
         if (frame->headers.stream_id == 0) {
             return HTTP2_PROTOCOL_ERROR;
         }
     } break;
     }
-    frame->headers.header_block_fragment = data + offset;
-    if (frame->headers.pad_len > 0) {
-        frame->headers.pad_data = data + offset + frame->headers.header_block_len;
-    }
+    frame->headers.header_block_fragment = slice(void *(data + offset), block_len, slice::STATIC);
 
     return HTTP2_NO_ERROR;
 }
@@ -119,7 +114,7 @@ http2_errors parse_priority(size_t offset, const uint8_t *data, size_t len, http
     if (frame->head.payload_length != (sizeof(uint32_t) + sizeof(uint8_t)) /*6*/) {
         return HTTP2_FRAME_SIZE_ERROR;
     }
-    frame->priority.stream_id = to_ui32(data + offset);
+    frame->priority.stream_id = get_uint32_from_byte(data + offset);
     if (frame->priority.stream_id == 0) {
         return HTTP2_PROTOCOL_ERROR;
     }
@@ -138,7 +133,7 @@ http2_errors parse_rst_stream(size_t offset, const uint8_t *data, size_t len, ht
     if (frame->head.payload_length != sizeof(uint32_t)) {
         return HTTP2_FRAME_SIZE_ERROR;
     }
-    frame->rst_stream.error_code = to_ui32(data + offset);
+    frame->rst_stream.error_code = get_uint32_from_byte(data + offset);
 
     return HTTP2_NO_ERROR;
 }
@@ -155,10 +150,10 @@ http2_errors parse_settings(size_t offset, const uint8_t *data, size_t len, http
         return HTTP2_FRAME_SIZE_ERROR;
     }
     frame->settings.count = frame->head.payload_length / 6;
-    frame->settings.setting = (http2_settings_entry *)new uint8_t[frame->head.payload_length];
+    frame->settings.settings = (http2_settings_entry *)new uint8_t[frame->head.payload_length];
     for (size_t i = 0; i < frame->settings.count; i++) {
-        frame->settings.setting[i].id = to_ui16(data + offset + i * 6);
-        frame->settings.setting[i].value = to_ui32(data + offset + i * 6 + 2);
+        frame->settings.settings[i].id = get_uint16_from_byte(data + offset + i * 6);
+        frame->settings.settings[i].value = get_uint32_from_byte(data + offset + i * 6 + 2);
     }
 
     return HTTP2_NO_ERROR;
@@ -176,25 +171,23 @@ http2_errors parse_promise(size_t offset, const uint8_t *data, size_t len, http2
         |                           Padding (*)                       ...
         +---------------------------------------------------------------+
     */
-    frame->promise.header_block_len = frame->head.payload_length;
+    size_t block_len = frame->head.payload_length;
     if (frame->head.flag == HTTP2_FLAG_PADDED) {
         frame->promise.pad_len = *(data + offset);
         if (frame->headers.pad_len >= frame->head.payload_length) {
             return HTTP2_PROTOCOL_ERROR;
         }
         offset += sizeof(uint8_t);
-        frame->promise.header_block_len -= sizeof(uint8_t) + frame->headers.pad_len;
+        block_len -= sizeof(uint8_t) + frame->headers.pad_len;
     }
-    frame->promise.promised_stream_id = to_ui32(data + offset);
+    frame->promise.promised_stream_id = get_uint32_from_byte(data + offset);
     if (frame->promise.promised_stream_id == 0) {
         return HTTP2_PROTOCOL_ERROR;
     }
     offset += sizeof(uint32_t);
-    frame->promise.header_block_len -= sizeof(uint32_t);
-    frame->promise.header_block_fragment = data + offset;
-    if (frame->promise.pad_len > 0) {
-        frame->promise.pad_data = (data + offset + frame->promise.header_block_len);
-    }
+    block_len -= sizeof(uint32_t);
+
+    frame->promise.header_block_fragment = slice(void *(data + offset), block_len, slice::STATIC);
 
     return HTTP2_NO_ERROR;
 }
@@ -210,7 +203,7 @@ http2_errors parse_ping(size_t offset, const uint8_t *data, size_t len, http2_fr
     if (frame->head.payload_length != sizeof(uint64_t)) {
         return HTTP2_FRAME_SIZE_ERROR;
     }
-    frame->ping.data = to_ui64(data + offset);
+    frame->ping.data = get_uint64_from_byte(data + offset);
 
     return HTTP2_NO_ERROR;
 }
@@ -225,15 +218,15 @@ http2_errors parse_goaway(size_t offset, const uint8_t *data, size_t len, http2_
         |                  Additional Debug Data (*)                    |
         +---------------------------------------------------------------+
     */
-    frame->goaway.last_stream_id = to_ui32(data + offset);
+    frame->goaway.last_stream_id = get_uint32_from_byte(data + offset);
     offset += sizeof(uint32_t);
     if (frame->goaway.last_stream_id == 0) {
         return HTTP2_PROTOCOL_ERROR;
     }
-    frame->goaway.error_code = to_ui32(data + offset);
+    frame->goaway.error_code = get_uint32_from_byte(data + offset);
     offset += sizeof(uint32_t);
-    frame->goaway.data_len = frame->head.payload_length - sizeof(uint32_t) * 2;
-    frame->goaway.data = data + offset;
+    size_t data_len = frame->head.payload_length - sizeof(uint32_t) * 2;
+    frame->goaway.data = slice(void *(data + offset), data_len, slice::STATIC);
     return HTTP2_NO_ERROR;
 }
 
@@ -246,7 +239,7 @@ http2_errors parse_window_update(size_t offset, const uint8_t *data, size_t len,
     if (frame->head.payload_length != 4) {
         return HTTP2_FRAME_SIZE_ERROR;
     }
-    frame->window_update.size = to_ui32(data + offset);
+    frame->window_update.size = get_uint32_from_byte(data + offset);
     if (frame->window_update.size == 0) {
         return HTTP2_PROTOCOL_ERROR;
     }
@@ -260,8 +253,7 @@ http2_errors parse_continuation(size_t offset, const uint8_t *data, size_t len, 
         |                   Header Block Fragment (*)                 ...
         +---------------------------------------------------------------+
     */
-    frame->continuation.header_block_len = frame->head.payload_length;
-    frame->continuation.header_block_fragment = data + offset;
+    frame->continuation.header_block_fragment = slice(void *(data + offset), frame->head.payload_length, slice::STATIC);
 
     return HTTP2_NO_ERROR;
 }
