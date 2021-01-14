@@ -1,4 +1,7 @@
 #pragma once
+#include <stddef.h>
+#include <stdint.h>
+
 #include "src/http2/errors.h"
 #include "src/http2/frame.h"
 
