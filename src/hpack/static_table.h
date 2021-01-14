@@ -14,70 +14,42 @@
  * limitations under the License.
  */
 
-/*
- * WARNING: Auto-generated code.
- *
- * To make changes to this file, change
- * tools/codegen/core/gen_static_metadata.py, and then re-run it.
- *
- * See metadata.h for an explanation of the interface here, and metadata.cc for
- * an explanation of what's going on.
- */
-
 #pragma once
 
 #include <assert.h>
 #include <stddef.h>
 #include <stdint.h>
 
-#include "src/utils/slice.h"
 #include "src/hpack/metadata.h"
+#include "src/utils/slice.h"
 
 #define HPACK_STATIC_MDSTR_COUNT 108
 #define HPACK_STATIC_MDELEM_COUNT 85
 
-typedef enum {
-    METADATA_STORAGE_EXTERNAL = 0,
-    METADATA_STORAGE_STATIC = 1,
-    METADATA_STORAGE_ALLOCATED = 2,
-} metadata_storage_type;
-
-typedef struct {
-    uintptr_t payload;
-} metadata_payload;
-
-#ifdef __cplusplus
-#define MAKE_METADATA_PAYLOAD(data, storage) \
-    (metadata_payload{((uintptr_t)(data)) | ((uintptr_t)storage)})
-#else
-#define MAKE_METADATA_PAYLOAD(data, storage) \
-    ((metadata_payload){((uintptr_t)(data)) | ((uintptr_t)storage)})
-#endif
-
 namespace hpack {
-extern const static_slice* g_static_metadata_slice_table;
-extern static_metadata* g_static_metadata_table;
-extern metadata_payload* g_static_metadata_payload;
+extern const slice *g_static_metadata_slice_table;
+extern static_metadata *g_static_metadata_element_table;
+extern metadata_payload *g_static_metadata_element_payload_table;
 }  // namespace hpack
 
 void init_static_metadata_ctx(void);
 void destroy_static_metadata_ctx(void);
 
 // get every slice
-inline const static_slice* get_static_slice_table() {
+inline const slice *get_static_slice_table() {
     assert(hpack::g_static_metadata_slice_table != nullptr);
     return hpack::g_static_metadata_slice_table;
 }
 // get key-value pair
-inline hpack::static_metadata* get_static_metadata_table() {
-    assert(hpack::g_static_metadata_table != nullptr);
-    return hpack::g_static_metadata_table;
+inline hpack::static_metadata *get_static_metadata_table() {
+    assert(hpack::g_static_metadata_element_table != nullptr);
+    return hpack::g_static_metadata_element_table;
 }
 
 // get key-value pair payload
-inline metadata_payload* get_static_metadata_payload() {
-    assert(hpack::g_static_metadata_payload != nullptr);
-    return hpack::g_static_metadata_payload;
+inline hpack::metadata_payload *get_static_metadata_payload_table() {
+    assert(hpack::g_static_metadata_element_payload_table != nullptr);
+    return hpack::g_static_metadata_element_payload_table;
 }
 
 // --------- slice ---------
@@ -116,11 +88,9 @@ inline metadata_payload* get_static_metadata_payload() {
 /* "accept-encoding" */
 #define HPACK_MDSTR_ACCEPT_ENCODING (get_static_slice_table()[16])
 /* "grpc-internal-encoding-request" */
-#define HPACK_MDSTR_GRPC_INTERNAL_ENCODING_REQUEST \
-  (get_static_slice_table()[17])
+#define HPACK_MDSTR_GRPC_INTERNAL_ENCODING_REQUEST (get_static_slice_table()[17])
 /* "grpc-internal-stream-encoding-request" */
-#define HPACK_MDSTR_GRPC_INTERNAL_STREAM_ENCODING_REQUEST \
-  (get_static_slice_table()[18])
+#define HPACK_MDSTR_GRPC_INTERNAL_STREAM_ENCODING_REQUEST (get_static_slice_table()[18])
 /* "user-agent" */
 #define HPACK_MDSTR_USER_AGENT (get_static_slice_table()[19])
 /* "host" */
@@ -148,24 +118,20 @@ inline metadata_payload* get_static_metadata_payload() {
 /* "grpc.timeout" */
 #define HPACK_MDSTR_GRPC_DOT_TIMEOUT (get_static_slice_table()[31])
 /* "grpc.max_request_message_bytes" */
-#define HPACK_MDSTR_GRPC_DOT_MAX_REQUEST_MESSAGE_BYTES \
-  (get_static_slice_table()[32])
+#define HPACK_MDSTR_GRPC_DOT_MAX_REQUEST_MESSAGE_BYTES (get_static_slice_table()[32])
 /* "grpc.max_response_message_bytes" */
-#define HPACK_MDSTR_GRPC_DOT_MAX_RESPONSE_MESSAGE_BYTES \
-  (get_static_slice_table()[33])
+#define HPACK_MDSTR_GRPC_DOT_MAX_RESPONSE_MESSAGE_BYTES (get_static_slice_table()[33])
 /* "/grpc.lb.v1.LoadBalancer/BalanceLoad" */
-#define HPACK_MDSTR_SLASH_GRPC_DOT_LB_DOT_V1_DOT_LOADBALANCER_SLASH_BALANCELOAD \
-  (get_static_slice_table()[34])
+#define HPACK_MDSTR_SLASH_GRPC_DOT_LB_DOT_V1_DOT_LOADBALANCER_SLASH_BALANCELOAD (get_static_slice_table()[34])
 /* "/envoy.service.load_stats.v2.LoadReportingService/StreamLoadStats" */
-#define HPACK_MDSTR_SLASH_ENVOY_DOT_SERVICE_DOT_LOAD_STATS_DOT_V2_DOT_LOADREPORTINGSERVICE_SLASH_STREAMLOADSTATS \
-  (get_static_slice_table()[35])
+#define HPACK_MDSTR_SLASH_ENVOY_DOT_SERVICE_DOT_LOAD_STATS_DOT_V2_DOT_LOADREPORTINGSERVICE_SLASH_STREAMLOADSTATS       \
+    (get_static_slice_table()[35])
 /* "/grpc.health.v1.Health/Watch" */
-#define HPACK_MDSTR_SLASH_GRPC_DOT_HEALTH_DOT_V1_DOT_HEALTH_SLASH_WATCH \
-  (get_static_slice_table()[36])
+#define HPACK_MDSTR_SLASH_GRPC_DOT_HEALTH_DOT_V1_DOT_HEALTH_SLASH_WATCH (get_static_slice_table()[36])
 /* "/envoy.service.discovery.v2.AggregatedDiscoveryService/StreamAggregatedResources"
  */
 #define HPACK_MDSTR_SLASH_ENVOY_DOT_SERVICE_DOT_DISCOVERY_DOT_V2_DOT_AGGREGATEDDISCOVERYSERVICE_SLASH_STREAMAGGREGATEDRESOURCES \
-  (get_static_slice_table()[37])
+    (get_static_slice_table()[37])
 /* "deflate" */
 #define HPACK_MDSTR_DEFLATE (get_static_slice_table()[38])
 /* "gzip" */
@@ -305,199 +271,177 @@ inline metadata_payload* get_static_metadata_payload() {
 /* "deflate,gzip" */
 #define HPACK_MDSTR_DEFLATE_COMMA_GZIP (get_static_slice_table()[106])
 /* "identity,deflate,gzip" */
-#define HPACK_MDSTR_IDENTITY_COMMA_DEFLATE_COMMA_GZIP \
-  (get_static_slice_table()[107])
+#define HPACK_MDSTR_IDENTITY_COMMA_DEFLATE_COMMA_GZIP (get_static_slice_table()[107])
 
 // --------- key : value ---------
 
 /* ":authority": "" */
-#define HPACK_MDELEM_AUTHORITY_EMPTY (get_static_metadata_payload()[0])
+#define HPACK_MDELEM_AUTHORITY_EMPTY (get_static_metadata_payload_table()[0])
 /* ":method": "GET" */
-#define HPACK_MDELEM_METHOD_GET (get_static_metadata_payload()[1])
+#define HPACK_MDELEM_METHOD_GET (get_static_metadata_payload_table()[1])
 /* ":method": "POST" */
-#define HPACK_MDELEM_METHOD_POST (get_static_metadata_payload()[2])
+#define HPACK_MDELEM_METHOD_POST (get_static_metadata_payload_table()[2])
 /* ":path": "/" */
-#define HPACK_MDELEM_PATH_SLASH (get_static_metadata_payload()[3])
+#define HPACK_MDELEM_PATH_SLASH (get_static_metadata_payload_table()[3])
 /* ":path": "/index.html" */
-#define HPACK_MDELEM_PATH_SLASH_INDEX_DOT_HTML \
-  (get_static_metadata_payload()[4])
+#define HPACK_MDELEM_PATH_SLASH_INDEX_DOT_HTML (get_static_metadata_payload_table()[4])
 /* ":scheme": "http" */
-#define HPACK_MDELEM_SCHEME_HTTP (get_static_metadata_payload()[5])
+#define HPACK_MDELEM_SCHEME_HTTP (get_static_metadata_payload_table()[5])
 /* ":scheme": "https" */
-#define HPACK_MDELEM_SCHEME_HTTPS (get_static_metadata_payload()[6])
+#define HPACK_MDELEM_SCHEME_HTTPS (get_static_metadata_payload_table()[6])
 /* ":status": "200" */
-#define HPACK_MDELEM_STATUS_200 (get_static_metadata_payload()[7])
+#define HPACK_MDELEM_STATUS_200 (get_static_metadata_payload_table()[7])
 /* ":status": "204" */
-#define HPACK_MDELEM_STATUS_204 (get_static_metadata_payload()[8])
+#define HPACK_MDELEM_STATUS_204 (get_static_metadata_payload_table()[8])
 /* ":status": "206" */
-#define HPACK_MDELEM_STATUS_206 (get_static_metadata_payload()[9])
+#define HPACK_MDELEM_STATUS_206 (get_static_metadata_payload_table()[9])
 /* ":status": "304" */
-#define HPACK_MDELEM_STATUS_304 (get_static_metadata_payload()[10])
+#define HPACK_MDELEM_STATUS_304 (get_static_metadata_payload_table()[10])
 /* ":status": "400" */
-#define HPACK_MDELEM_STATUS_400 (get_static_metadata_payload()[11])
+#define HPACK_MDELEM_STATUS_400 (get_static_metadata_payload_table()[11])
 /* ":status": "404" */
-#define HPACK_MDELEM_STATUS_404 (get_static_metadata_payload()[12])
+#define HPACK_MDELEM_STATUS_404 (get_static_metadata_payload_table()[12])
 /* ":status": "500" */
-#define HPACK_MDELEM_STATUS_500 (get_static_metadata_payload()[13])
+#define HPACK_MDELEM_STATUS_500 (get_static_metadata_payload_table()[13])
 /* "accept-charset": "" */
-#define HPACK_MDELEM_ACCEPT_CHARSET_EMPTY (get_static_metadata_payload()[14])
+#define HPACK_MDELEM_ACCEPT_CHARSET_EMPTY (get_static_metadata_payload_table()[14])
 /* "accept-encoding": "gzip, deflate" */
-#define HPACK_MDELEM_ACCEPT_ENCODING_GZIP_COMMA_DEFLATE \
-  (get_static_metadata_payload()[15])
+#define HPACK_MDELEM_ACCEPT_ENCODING_GZIP_COMMA_DEFLATE (get_static_metadata_payload_table()[15])
 /* "accept-language": "" */
-#define HPACK_MDELEM_ACCEPT_LANGUAGE_EMPTY (get_static_metadata_payload()[16])
+#define HPACK_MDELEM_ACCEPT_LANGUAGE_EMPTY (get_static_metadata_payload_table()[16])
 /* "accept-ranges": "" */
-#define HPACK_MDELEM_ACCEPT_RANGES_EMPTY (get_static_metadata_payload()[17])
+#define HPACK_MDELEM_ACCEPT_RANGES_EMPTY (get_static_metadata_payload_table()[17])
 /* "accept": "" */
-#define HPACK_MDELEM_ACCEPT_EMPTY (get_static_metadata_payload()[18])
+#define HPACK_MDELEM_ACCEPT_EMPTY (get_static_metadata_payload_table()[18])
 /* "access-control-allow-origin": "" */
-#define HPACK_MDELEM_ACCESS_CONTROL_ALLOW_ORIGIN_EMPTY \
-  (get_static_metadata_payload()[19])
+#define HPACK_MDELEM_ACCESS_CONTROL_ALLOW_ORIGIN_EMPTY (get_static_metadata_payload_table()[19])
 /* "age": "" */
-#define HPACK_MDELEM_AGE_EMPTY (get_static_metadata_payload()[20])
+#define HPACK_MDELEM_AGE_EMPTY (get_static_metadata_payload_table()[20])
 /* "allow": "" */
-#define HPACK_MDELEM_ALLOW_EMPTY (get_static_metadata_payload()[21])
+#define HPACK_MDELEM_ALLOW_EMPTY (get_static_metadata_payload_table()[21])
 /* "authorization": "" */
-#define HPACK_MDELEM_AUTHORIZATION_EMPTY (get_static_metadata_payload()[22])
+#define HPACK_MDELEM_AUTHORIZATION_EMPTY (get_static_metadata_payload_table()[22])
 /* "cache-control": "" */
-#define HPACK_MDELEM_CACHE_CONTROL_EMPTY (get_static_metadata_payload()[23])
+#define HPACK_MDELEM_CACHE_CONTROL_EMPTY (get_static_metadata_payload_table()[23])
 /* "content-disposition": "" */
-#define HPACK_MDELEM_CONTENT_DISPOSITION_EMPTY \
-  (get_static_metadata_payload()[24])
+#define HPACK_MDELEM_CONTENT_DISPOSITION_EMPTY (get_static_metadata_payload_table()[24])
 /* "content-encoding": "" */
-#define HPACK_MDELEM_CONTENT_ENCODING_EMPTY (get_static_metadata_payload()[25])
+#define HPACK_MDELEM_CONTENT_ENCODING_EMPTY (get_static_metadata_payload_table()[25])
 /* "content-language": "" */
-#define HPACK_MDELEM_CONTENT_LANGUAGE_EMPTY (get_static_metadata_payload()[26])
+#define HPACK_MDELEM_CONTENT_LANGUAGE_EMPTY (get_static_metadata_payload_table()[26])
 /* "content-length": "" */
-#define HPACK_MDELEM_CONTENT_LENGTH_EMPTY (get_static_metadata_payload()[27])
+#define HPACK_MDELEM_CONTENT_LENGTH_EMPTY (get_static_metadata_payload_table()[27])
 /* "content-location": "" */
-#define HPACK_MDELEM_CONTENT_LOCATION_EMPTY (get_static_metadata_payload()[28])
+#define HPACK_MDELEM_CONTENT_LOCATION_EMPTY (get_static_metadata_payload_table()[28])
 /* "content-range": "" */
-#define HPACK_MDELEM_CONTENT_RANGE_EMPTY (get_static_metadata_payload()[29])
+#define HPACK_MDELEM_CONTENT_RANGE_EMPTY (get_static_metadata_payload_table()[29])
 /* "content-type": "" */
-#define HPACK_MDELEM_CONTENT_TYPE_EMPTY (get_static_metadata_payload()[30])
+#define HPACK_MDELEM_CONTENT_TYPE_EMPTY (get_static_metadata_payload_table()[30])
 /* "cookie": "" */
-#define HPACK_MDELEM_COOKIE_EMPTY (get_static_metadata_payload()[31])
+#define HPACK_MDELEM_COOKIE_EMPTY (get_static_metadata_payload_table()[31])
 /* "date": "" */
-#define HPACK_MDELEM_DATE_EMPTY (get_static_metadata_payload()[32])
+#define HPACK_MDELEM_DATE_EMPTY (get_static_metadata_payload_table()[32])
 /* "etag": "" */
-#define HPACK_MDELEM_ETAG_EMPTY (get_static_metadata_payload()[33])
+#define HPACK_MDELEM_ETAG_EMPTY (get_static_metadata_payload_table()[33])
 /* "expect": "" */
-#define HPACK_MDELEM_EXPECT_EMPTY (get_static_metadata_payload()[34])
+#define HPACK_MDELEM_EXPECT_EMPTY (get_static_metadata_payload_table()[34])
 /* "expires": "" */
-#define HPACK_MDELEM_EXPIRES_EMPTY (get_static_metadata_payload()[35])
+#define HPACK_MDELEM_EXPIRES_EMPTY (get_static_metadata_payload_table()[35])
 /* "from": "" */
-#define HPACK_MDELEM_FROM_EMPTY (get_static_metadata_payload()[36])
+#define HPACK_MDELEM_FROM_EMPTY (get_static_metadata_payload_table()[36])
 /* "host": "" */
-#define HPACK_MDELEM_HOST_EMPTY (get_static_metadata_payload()[37])
+#define HPACK_MDELEM_HOST_EMPTY (get_static_metadata_payload_table()[37])
 /* "if-match": "" */
-#define HPACK_MDELEM_IF_MATCH_EMPTY (get_static_metadata_payload()[38])
+#define HPACK_MDELEM_IF_MATCH_EMPTY (get_static_metadata_payload_table()[38])
 /* "if-modified-since": "" */
-#define HPACK_MDELEM_IF_MODIFIED_SINCE_EMPTY \
-  (get_static_metadata_payload()[39])
+#define HPACK_MDELEM_IF_MODIFIED_SINCE_EMPTY (get_static_metadata_payload_table()[39])
 /* "if-none-match": "" */
-#define HPACK_MDELEM_IF_NONE_MATCH_EMPTY (get_static_metadata_payload()[40])
+#define HPACK_MDELEM_IF_NONE_MATCH_EMPTY (get_static_metadata_payload_table()[40])
 /* "if-range": "" */
-#define HPACK_MDELEM_IF_RANGE_EMPTY (get_static_metadata_payload()[41])
+#define HPACK_MDELEM_IF_RANGE_EMPTY (get_static_metadata_payload_table()[41])
 /* "if-unmodified-since": "" */
-#define HPACK_MDELEM_IF_UNMODIFIED_SINCE_EMPTY \
-  (get_static_metadata_payload()[42])
+#define HPACK_MDELEM_IF_UNMODIFIED_SINCE_EMPTY (get_static_metadata_payload_table()[42])
 /* "last-modified": "" */
-#define HPACK_MDELEM_LAST_MODIFIED_EMPTY (get_static_metadata_payload()[43])
+#define HPACK_MDELEM_LAST_MODIFIED_EMPTY (get_static_metadata_payload_table()[43])
 /* "link": "" */
-#define HPACK_MDELEM_LINK_EMPTY (get_static_metadata_payload()[44])
+#define HPACK_MDELEM_LINK_EMPTY (get_static_metadata_payload_table()[44])
 /* "location": "" */
-#define HPACK_MDELEM_LOCATION_EMPTY (get_static_metadata_payload()[45])
+#define HPACK_MDELEM_LOCATION_EMPTY (get_static_metadata_payload_table()[45])
 /* "max-forwards": "" */
-#define HPACK_MDELEM_MAX_FORWARDS_EMPTY (get_static_metadata_payload()[46])
+#define HPACK_MDELEM_MAX_FORWARDS_EMPTY (get_static_metadata_payload_table()[46])
 /* "proxy-authenticate": "" */
-#define HPACK_MDELEM_PROXY_AUTHENTICATE_EMPTY \
-  (get_static_metadata_payload()[47])
+#define HPACK_MDELEM_PROXY_AUTHENTICATE_EMPTY (get_static_metadata_payload_table()[47])
 /* "proxy-authorization": "" */
-#define HPACK_MDELEM_PROXY_AUTHORIZATION_EMPTY \
-  (get_static_metadata_payload()[48])
+#define HPACK_MDELEM_PROXY_AUTHORIZATION_EMPTY (get_static_metadata_payload_table()[48])
 /* "range": "" */
-#define HPACK_MDELEM_RANGE_EMPTY (get_static_metadata_payload()[49])
+#define HPACK_MDELEM_RANGE_EMPTY (get_static_metadata_payload_table()[49])
 /* "referer": "" */
-#define HPACK_MDELEM_REFERER_EMPTY (get_static_metadata_payload()[50])
+#define HPACK_MDELEM_REFERER_EMPTY (get_static_metadata_payload_table()[50])
 /* "refresh": "" */
-#define HPACK_MDELEM_REFRESH_EMPTY (get_static_metadata_payload()[51])
+#define HPACK_MDELEM_REFRESH_EMPTY (get_static_metadata_payload_table()[51])
 /* "retry-after": "" */
-#define HPACK_MDELEM_RETRY_AFTER_EMPTY (get_static_metadata_payload()[52])
+#define HPACK_MDELEM_RETRY_AFTER_EMPTY (get_static_metadata_payload_table()[52])
 /* "server": "" */
-#define HPACK_MDELEM_SERVER_EMPTY (get_static_metadata_payload()[53])
+#define HPACK_MDELEM_SERVER_EMPTY (get_static_metadata_payload_table()[53])
 /* "set-cookie": "" */
-#define HPACK_MDELEM_SET_COOKIE_EMPTY (get_static_metadata_payload()[54])
+#define HPACK_MDELEM_SET_COOKIE_EMPTY (get_static_metadata_payload_table()[54])
 /* "strict-transport-security": "" */
-#define HPACK_MDELEM_STRICT_TRANSPORT_SECURITY_EMPTY \
-  (get_static_metadata_payload()[55])
+#define HPACK_MDELEM_STRICT_TRANSPORT_SECURITY_EMPTY (get_static_metadata_payload_table()[55])
 /* "transfer-encoding": "" */
-#define HPACK_MDELEM_TRANSFER_ENCODING_EMPTY \
-  (get_static_metadata_payload()[56])
+#define HPACK_MDELEM_TRANSFER_ENCODING_EMPTY (get_static_metadata_payload_table()[56])
 /* "user-agent": "" */
-#define HPACK_MDELEM_USER_AGENT_EMPTY (get_static_metadata_payload()[57])
+#define HPACK_MDELEM_USER_AGENT_EMPTY (get_static_metadata_payload_table()[57])
 /* "vary": "" */
-#define HPACK_MDELEM_VARY_EMPTY (get_static_metadata_payload()[58])
+#define HPACK_MDELEM_VARY_EMPTY (get_static_metadata_payload_table()[58])
 /* "via": "" */
-#define HPACK_MDELEM_VIA_EMPTY (get_static_metadata_payload()[59])
+#define HPACK_MDELEM_VIA_EMPTY (get_static_metadata_payload_table()[59])
 /* "www-authenticate": "" */
-#define HPACK_MDELEM_WWW_AUTHENTICATE_EMPTY (get_static_metadata_payload()[60])
+#define HPACK_MDELEM_WWW_AUTHENTICATE_EMPTY (get_static_metadata_payload_table()[60])
 /* "grpc-status": "0" */
-#define HPACK_MDELEM_GRPC_STATUS_0 (get_static_metadata_payload()[61])
+#define HPACK_MDELEM_GRPC_STATUS_0 (get_static_metadata_payload_table()[61])
 /* "grpc-status": "1" */
-#define HPACK_MDELEM_GRPC_STATUS_1 (get_static_metadata_payload()[62])
+#define HPACK_MDELEM_GRPC_STATUS_1 (get_static_metadata_payload_table()[62])
 /* "grpc-status": "2" */
-#define HPACK_MDELEM_GRPC_STATUS_2 (get_static_metadata_payload()[63])
+#define HPACK_MDELEM_GRPC_STATUS_2 (get_static_metadata_payload_table()[63])
 /* "grpc-encoding": "identity" */
-#define HPACK_MDELEM_GRPC_ENCODING_IDENTITY (get_static_metadata_payload()[64])
+#define HPACK_MDELEM_GRPC_ENCODING_IDENTITY (get_static_metadata_payload_table()[64])
 /* "grpc-encoding": "gzip" */
-#define HPACK_MDELEM_GRPC_ENCODING_GZIP (get_static_metadata_payload()[65])
+#define HPACK_MDELEM_GRPC_ENCODING_GZIP (get_static_metadata_payload_table()[65])
 /* "grpc-encoding": "deflate" */
-#define HPACK_MDELEM_GRPC_ENCODING_DEFLATE (get_static_metadata_payload()[66])
+#define HPACK_MDELEM_GRPC_ENCODING_DEFLATE (get_static_metadata_payload_table()[66])
 /* "te": "trailers" */
-#define HPACK_MDELEM_TE_TRAILERS (get_static_metadata_payload()[67])
+#define HPACK_MDELEM_TE_TRAILERS (get_static_metadata_payload_table()[67])
 /* "content-type": "application/grpc" */
-#define HPACK_MDELEM_CONTENT_TYPE_APPLICATION_SLASH_GRPC \
-  (get_static_metadata_payload()[68])
+#define HPACK_MDELEM_CONTENT_TYPE_APPLICATION_SLASH_GRPC (get_static_metadata_payload_table()[68])
 /* ":scheme": "grpc" */
-#define HPACK_MDELEM_SCHEME_GRPC (get_static_metadata_payload()[69])
+#define HPACK_MDELEM_SCHEME_GRPC (get_static_metadata_payload_table()[69])
 /* ":method": "PUT" */
-#define HPACK_MDELEM_METHOD_PUT (get_static_metadata_payload()[70])
+#define HPACK_MDELEM_METHOD_PUT (get_static_metadata_payload_table()[70])
 /* "accept-encoding": "" */
-#define HPACK_MDELEM_ACCEPT_ENCODING_EMPTY (get_static_metadata_payload()[71])
+#define HPACK_MDELEM_ACCEPT_ENCODING_EMPTY (get_static_metadata_payload_table()[71])
 /* "content-encoding": "identity" */
-#define HPACK_MDELEM_CONTENT_ENCODING_IDENTITY \
-  (get_static_metadata_payload()[72])
+#define HPACK_MDELEM_CONTENT_ENCODING_IDENTITY (get_static_metadata_payload_table()[72])
 /* "content-encoding": "gzip" */
-#define HPACK_MDELEM_CONTENT_ENCODING_GZIP (get_static_metadata_payload()[73])
+#define HPACK_MDELEM_CONTENT_ENCODING_GZIP (get_static_metadata_payload_table()[73])
 /* "lb-cost-bin": "" */
-#define HPACK_MDELEM_LB_COST_BIN_EMPTY (get_static_metadata_payload()[74])
+#define HPACK_MDELEM_LB_COST_BIN_EMPTY (get_static_metadata_payload_table()[74])
 /* "grpc-accept-encoding": "identity" */
-#define HPACK_MDELEM_GRPC_ACCEPT_ENCODING_IDENTITY \
-  (get_static_metadata_payload()[75])
+#define HPACK_MDELEM_GRPC_ACCEPT_ENCODING_IDENTITY (get_static_metadata_payload_table()[75])
 /* "grpc-accept-encoding": "deflate" */
-#define HPACK_MDELEM_GRPC_ACCEPT_ENCODING_DEFLATE \
-  (get_static_metadata_payload()[76])
+#define HPACK_MDELEM_GRPC_ACCEPT_ENCODING_DEFLATE (get_static_metadata_payload_table()[76])
 /* "grpc-accept-encoding": "identity,deflate" */
-#define HPACK_MDELEM_GRPC_ACCEPT_ENCODING_IDENTITY_COMMA_DEFLATE \
-  (get_static_metadata_payload()[77])
+#define HPACK_MDELEM_GRPC_ACCEPT_ENCODING_IDENTITY_COMMA_DEFLATE (get_static_metadata_payload_table()[77])
 /* "grpc-accept-encoding": "gzip" */
-#define HPACK_MDELEM_GRPC_ACCEPT_ENCODING_GZIP \
-  (get_static_metadata_payload()[78])
+#define HPACK_MDELEM_GRPC_ACCEPT_ENCODING_GZIP (get_static_metadata_payload_table()[78])
 /* "grpc-accept-encoding": "identity,gzip" */
-#define HPACK_MDELEM_GRPC_ACCEPT_ENCODING_IDENTITY_COMMA_GZIP \
-  (get_static_metadata_payload()[79])
+#define HPACK_MDELEM_GRPC_ACCEPT_ENCODING_IDENTITY_COMMA_GZIP (get_static_metadata_payload_table()[79])
 /* "grpc-accept-encoding": "deflate,gzip" */
-#define HPACK_MDELEM_GRPC_ACCEPT_ENCODING_DEFLATE_COMMA_GZIP \
-  (get_static_metadata_payload()[80])
+#define HPACK_MDELEM_GRPC_ACCEPT_ENCODING_DEFLATE_COMMA_GZIP (get_static_metadata_payload_table()[80])
 /* "grpc-accept-encoding": "identity,deflate,gzip" */
-#define HPACK_MDELEM_GRPC_ACCEPT_ENCODING_IDENTITY_COMMA_DEFLATE_COMMA_GZIP \
-  (get_static_metadata_payload()[81])
+#define HPACK_MDELEM_GRPC_ACCEPT_ENCODING_IDENTITY_COMMA_DEFLATE_COMMA_GZIP (get_static_metadata_payload_table()[81])
 /* "accept-encoding": "identity" */
-#define HPACK_MDELEM_ACCEPT_ENCODING_IDENTITY \
-  (get_static_metadata_payload()[82])
+#define HPACK_MDELEM_ACCEPT_ENCODING_IDENTITY (get_static_metadata_payload_table()[82])
 /* "accept-encoding": "gzip" */
-#define HPACK_MDELEM_ACCEPT_ENCODING_GZIP (get_static_metadata_payload()[83])
+#define HPACK_MDELEM_ACCEPT_ENCODING_GZIP (get_static_metadata_payload_table()[83])
 /* "accept-encoding": "identity,gzip" */
-#define HPACK_MDELEM_ACCEPT_ENCODING_IDENTITY_COMMA_GZIP \
-  (get_static_metadata_payload()[84])
+#define HPACK_MDELEM_ACCEPT_ENCODING_IDENTITY_COMMA_GZIP (get_static_metadata_payload_table()[84])

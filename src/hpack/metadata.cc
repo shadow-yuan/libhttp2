@@ -14,19 +14,11 @@
  * limitations under the License.
  */
 
-/*
- * WARNING: Auto-generated code.
- *
- * To make changes to this file, change
- * tools/codegen/core/gen_static_metadata.py, and then re-run it.
- *
- * See metadata.h for an explanation of the interface here, and metadata.cc for
- * an explanation of what's going on.
- */
-
 #include "src/hpack/metadata.h"
 #include <chrono>
+
 #include "src/utils/murmur_hash.h"
+
 namespace hpack {
 
 static uint32_t g_seed = 0;
@@ -35,13 +27,13 @@ static uint32_t g_seed = 0;
 #define ROTR(x, n) (((x) >> (n)) | ((x) << (sizeof(x) * 8 - (n))))
 #define METADATA_KV_HASH(k_hash, v_hash) (ROTL((k_hash), 2) ^ (v_hash))
 
-static uint32_t get_slice_hash(const slice& s) {
+static uint32_t get_slice_hash(const slice &s) {
     return murmur_hash3(s.data(), s.size(), g_seed);
 }
 
-static_metadata::static_metadata(
-    const slice& key, const slice& value, uintptr_t idx)
-    : _kv({key, value}), _index(idx) {
+static_metadata::static_metadata(const slice &key, const slice &value, uintptr_t idx)
+    : _kv({key, value})
+    , _index(idx) {
 
     if (!g_seed) {
         auto d = std::chrono::system_clock::now().time_since_epoch();
@@ -54,12 +46,16 @@ static_metadata::static_metadata(
     _hash = METADATA_KV_HASH(k_hash, v_hash);
 }
 
-const metadata_item& static_metadata::data() const {
+const metadata_element &static_metadata::data() const {
     return _kv;
 }
 
-uint32_t static_metadata::hash() const { return _hash; }
+uint32_t static_metadata::hash() const {
+    return _hash;
+}
 
-uintptr_t static_metadata::index() const { return _index; }
+uintptr_t static_metadata::index() const {
+    return _index;
+}
 
 }  // namespace hpack

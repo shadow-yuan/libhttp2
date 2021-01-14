@@ -14,36 +14,44 @@
  * limitations under the License.
  */
 
-/*
- * WARNING: Auto-generated code.
- *
- * To make changes to this file, change
- * tools/codegen/core/gen_static_metadata.py, and then re-run it.
- *
- * See metadata.h for an explanation of the interface here, and metadata.cc for
- * an explanation of what's going on.
- */
-
 #pragma once
+#include <stdint.h>
+
 #include "src/utils/slice.h"
+
 namespace hpack {
 
 typedef struct {
-  const slice key;
-  const slice value;
-} metadata_item;
+    const slice key;
+    const slice value;
+} metadata_element;
 
 class static_metadata {
 public:
-    static_metadata(const slice& key, const slice& value, uintptr_t idx);
-
-    const metadata_item& data() const;
+    static_metadata(const slice &key, const slice &value, uintptr_t idx);
+    const metadata_element &data() const;
     uint32_t hash() const;
     uintptr_t index() const;
 
 private:
-    metadata_item _kv;
-    uint32_t _hash;
+    metadata_element _kv;
     uintptr_t _index;
+    uint32_t _hash;
 };
+
+typedef enum {
+    METADATA_STORAGE_STATIC = 0,
+    METADATA_STORAGE_DYNAMIC,
+} metadata_storage_type;
+
+typedef struct {
+    uintptr_t payload;
+} metadata_payload;
+
+#ifdef __cplusplus
+#define MAKE_METADATA_PAYLOAD(data, storage) (metadata_payload{((uintptr_t)(data)) | ((uintptr_t)storage)})
+#else
+#define MAKE_METADATA_PAYLOAD(data, storage) ((metadata_payload){((uintptr_t)(data)) | ((uintptr_t)storage)})
+#endif
+
 }  // namespace hpack
