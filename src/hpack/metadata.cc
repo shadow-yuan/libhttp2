@@ -58,4 +58,27 @@ uintptr_t static_metadata::index() const {
     return _index;
 }
 
+metadata_element get_metadata_element_from_payload(metadata_payload p) {
+    if (p.payload & METADATA_STORAGE_STATIC) {
+        uintptr_t real_pointer = p.payload & uintptr_t(~1);
+        static_metadata *sm = reinterpret_cast<static_metadata *>(real_pointer);
+        return sm->data();
+    }
+    uintptr_t real_pointer = p.payload & uintptr_t(~2);
+    metadata_element *mdel = reinterpret_cast<metadata_element *>(real_pointer);
+    return *mdel;
+}
+
+size_t get_metadata_element_size(const metadata_element &mdel) {
+    return mdel.key.size() + mdel.value.size();
+}
+
+void medata_element_payload_free(metadata_payload p) {
+    if (p.payload & METADATA_STORAGE_DYNAMIC) {
+        uintptr_t real_pointer = p.payload & uintptr_t(~2);
+        metadata_element *mdel = reinterpret_cast<metadata_element *>(real_pointer);
+        delete mdel;
+    }
+}
+
 }  // namespace hpack

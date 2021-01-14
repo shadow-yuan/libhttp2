@@ -30,8 +30,15 @@ public:
     bool empty() const;
     slice::type get_type() const;
 
-protected:
+    void assign(const std::string &s);
+
+private:
+    friend slice MakeSliceByLength(size_t len);
+    friend slice operator+(slice s1, slice s2);
     slice_refcount *_refs;
     uint8_t *_bytes;
     size_t _length;
 };
+
+slice MakeSliceByLength(size_t len);
+slice operator+(slice s1, slice s2);

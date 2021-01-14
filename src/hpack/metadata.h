@@ -22,8 +22,8 @@
 namespace hpack {
 
 typedef struct {
-    const slice key;
-    const slice value;
+    slice key;
+    slice value;
 } metadata_element;
 
 class static_metadata {
@@ -40,7 +40,7 @@ private:
 };
 
 typedef enum {
-    METADATA_STORAGE_STATIC = 0,
+    METADATA_STORAGE_STATIC = 1,
     METADATA_STORAGE_DYNAMIC,
 } metadata_storage_type;
 
@@ -53,5 +53,9 @@ typedef struct {
 #else
 #define MAKE_METADATA_PAYLOAD(data, storage) ((metadata_payload){((uintptr_t)(data)) | ((uintptr_t)storage)})
 #endif
+
+metadata_element get_metadata_element_from_payload(metadata_payload p);
+size_t get_metadata_element_size(const metadata_element &mdel);
+void medata_element_payload_free(metadata_payload p);
 
 }  // namespace hpack

@@ -173,3 +173,39 @@ bool slice::empty() const {
 slice::type slice::get_type() const {
     return (_refs) ? DYNAMIC : STATIC;
 }
+
+void slice::assign(const std::string &s) {
+    slice obj(s.data(), s.size());
+    if (_refs) {
+        _refs->unref();
+    }
+    _refs = std::move(obj._refs);
+    _bytes = std::move(obj._bytes);
+    _length = std::move(obj._length);
+}
+
+slice MakeSliceByLength(size_t len) {
+    slice s;
+    s._refs = reinterpret_cast<slice_refcount *>(new uint8_t[(sizeof(slice_refcount) + len)]);
+    new (s._refs) slice_refcount();
+    s._length = len;
+    s._bytes = reinterpret_cast<uint8_t *>(s._refs + 1);
+    return s;
+}
+
+slice operator+(slice s1, slice s2) {
+    if (s1.empty() && s2.empty()) {
+        return slice();
+    }
+    size_t len = s1.size() + s2.size();
+    slice s = MakeSliceByLength(len);
+    uint8_t *buff = const_cast<uint8_t *>(s.data());
+    if (!s1.empty()) {
+        memcpy(buff, s1.data(), s1.size());
+        buff += s1.size();
+    }
+    if (!s2.empty()) {
+        memcpy(buff, s2.data(), s2.size());
+    }
+    return s;
+}
