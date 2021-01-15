@@ -13,6 +13,8 @@ public:
         return _cid;
     }
 
+    uint32_t create_stream(bool client);
+
 private:
     uint64_t _cid;
     std::vector<std::shared_ptr<http2_stream>> _streams;

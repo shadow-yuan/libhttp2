@@ -3,41 +3,65 @@
 #include "src/http2/frame.h"
 #include "src/http2/parser.h"
 
-http2_transport::http2_transport() {}
+http2_transport::http2_transport(http2::TcpSendService *sender) {
+    _sender = sender;
+}
+
 http2_transport::~http2_transport() {}
 
-bool http2_transport::ConnectionClosed(uint64_t cid) {
-    return destroy_connection(cid);
+void http2_transport::set_rpc_call_service(http2::RpcCallService *service) {
+    _service = service;
 }
 
-bool http2_transport::ConnectionComming(uint64_t cid) {
-    return create_connection(cid);
+size_t http2_transport::get_max_header_size() {
+    return http2_get_frame_head_length();
 }
 
-void http2_transport::ReceivedHttp2Data(uint64_t cid, const uint8_t *buff, size_t buff_size) {
+int http2_transport::check_package_length(uint64_t cid, const void *data, size_t len) {
+    size_t frame_len = http2_get_frame_length(reinterpret_cast<const uint8_t *>(data), len);
+    if (frame_len + http2_get_frame_head_length() > len) {
+        return -1;
+    }
+    return frame_len + http2_get_frame_head_length() == len;
+}
+
+void http2_transport::connection_enter(uint64_t cid, bool client) {
+    std::shared_ptr<http2_connection> conn = create_connection(cid, client);
+    if (conn != nullptr) {
+        ;
+    }
+}
+
+void http2_transport::received_data(uint16_t cid, const void *buf, size_t len) {
     http2_frame frame;
-    http2_errors error = http2_parse(buff, buff_size, &frame);
+    http2_errors error = http2_parse(reinterpret_cast<const uint8_t *>(buf), len, &frame);
     if (error == HTTP2_NO_ERROR) {
     }
 }
 
-bool http2_transport::is_connection_exist(uint64_t cid) const {
-    for (auto conn : _connections) {
-        if (conn != nullptr && conn->get_cid() == cid) {
+void http2_transport::connection_leave(uint64_t cid) {
+    destroy_connection(cid);
+}
+
+bool http2_transport::is_connection_exist(uint64_t cid, std::shared_ptr<http2_connection> *conn) {
+    for (auto i : _connections) {
+        if (i != nullptr && i->get_cid() == cid) {
+            if (conn != nullptr) {
+                *conn = i;
+            }
             return true;
         }
     }
     return false;
 }
 
-bool http2_transport::create_connection(uint64_t cid) {
-    if (is_connection_exist(cid)) {
-        return false;
+std::shared_ptr<http2_connection> http2_transport::create_connection(uint64_t cid, bool client) {
+    std::shared_ptr<http2_connection> conn;
+    if (!is_connection_exist(cid, &conn)) {
+        conn = std::make_shared<http2_connection>(cid);
+        _connections.push_back(conn);
     }
-
-    std::shared_ptr<http2_connection> conn = std::make_shared<http2_connection>(cid);
-    _connections.push_back(conn);
-    return true;
+    return conn;
 }
 
 bool http2_transport::destroy_connection(uint64_t cid) {
