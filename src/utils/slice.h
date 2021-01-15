@@ -31,6 +31,7 @@ public:
     slice::type get_type() const;
 
     void assign(const std::string &s);
+    bool compare(const std::string &s) const;
 
 private:
     friend slice MakeSliceByLength(size_t len);

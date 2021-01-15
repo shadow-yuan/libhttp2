@@ -1,5 +1,6 @@
 #include "src/hpack/static_metadata.h"
 #include <chrono>
+#include <map>
 #include "src/utils/useful.h"
 #include "src/utils/murmur_hash.h"
 
@@ -11,12 +12,14 @@ inline slice make_static_slice(const char *buf) {
 }
 
 static uint32_t g_seed = 0;
-static uint32_t get_slice_hash(const slice &s) {
+
+template <typename T>
+static uint32_t get_slice_hash(const T &s) {
     return murmur_hash3(s.data(), s.size(), g_seed);
 }
 
 namespace hpack {
-static_metadata::static_metadata(const slice &key, const slice &value, uintptr_t idx)
+static_metadata::static_metadata(const slice &key, const slice &value, uint32_t idx)
     : _kv({key, value})
     , _index(idx) {
 
@@ -39,7 +42,7 @@ uint32_t static_metadata::hash() const {
     return _hash;
 }
 
-uintptr_t static_metadata::index() const {
+uint32_t static_metadata::index() const {
     return _index;
 }
 
@@ -137,6 +140,7 @@ struct static_metadata_context {
         static_metadata(make_static_slice("accept-encoding"), make_static_slice("gzip"), 84),
         static_metadata(make_static_slice("accept-encoding"), make_static_slice("identity,gzip"), 85),
     };
+    std::multimap<uint32_t, uint32_t> hash_table;
 };  // struct static_metadata_context
 
 static static_metadata_context *g_static_metadata_ctx = nullptr;
@@ -147,6 +151,12 @@ void init_static_metadata_context(void) {
     if (!hpack::g_static_metadata_ctx) {
         hpack::g_static_metadata_ctx = new hpack::static_metadata_context();
         hpack::g_static_mdelem_table = hpack::g_static_metadata_ctx->static_mdelem_table;
+
+        for (size_t i = 1; i <= HPACK_STATIC_MDELEM_COUNT; i++) {
+            auto hash = hpack::g_static_mdelem_table[i].hash();
+            auto index = hpack::g_static_mdelem_table[i].index();
+            hpack::g_static_metadata_ctx->hash_table.insert({hash, index});
+        }
     }
 }
 
@@ -156,4 +166,21 @@ void destroy_static_metadata_context(void) {
         hpack::g_static_metadata_ctx = nullptr;
         hpack::g_static_mdelem_table = nullptr;
     }
+}
+
+uint32_t full_match_mdelem_data_index(const std::string &key, const std::string &value) {
+    uint32_t hash = get_slice_hash(key);
+    auto pr = hpack::g_static_metadata_ctx->hash_table.equal_range(hash);
+    if (pr.first == hpack::g_static_metadata_ctx->hash_table.end()) {
+        return 0;
+    }
+
+    for (auto it = pr.first; it != pr.second; ++it) {
+        uint32_t index = it->second;
+        const auto &mdel = hpack::g_static_mdelem_table[index].data();
+        if (mdel.key.compare(key) && mdel.value.compare(value)) {
+            return index;
+        }
+    }
+    return 0;
 }

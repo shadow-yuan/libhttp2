@@ -3,6 +3,7 @@
 #include <assert.h>
 #include <stddef.h>
 #include <stdint.h>
+#include <string>
 
 #include "src/utils/slice.h"
 
@@ -18,14 +19,14 @@ typedef struct {
 
 class static_metadata {
 public:
-    static_metadata(const slice &key, const slice &value, uintptr_t idx);
+    static_metadata(const slice &key, const slice &value, uint32_t idx);
     const mdelem_data &data() const;
     uint32_t hash() const;
-    uintptr_t index() const;
+    uint32_t index() const;
 
 private:
     mdelem_data _kv;
-    uintptr_t _index;
+    uint32_t _index;
     uint32_t _hash;
 };
 
@@ -41,3 +42,6 @@ inline hpack::static_metadata *get_static_mdelem_table() {
 }
 
 #define MDELEM_SIZE(mdel) ((mdel).key.size() + (mdel).value.size())
+
+// Return 0 means not found
+uint32_t full_match_mdelem_data_index(const std::string &key, const std::string &value);

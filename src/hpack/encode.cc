@@ -1,6 +1,7 @@
 #include "src/hpack/encode.h"
 #include <time.h>
 #include "src/utils/useful.h"
+#include "src/hpack/static_metadata.h"
 
 namespace hpack {
 
@@ -47,16 +48,20 @@ void encodeH2caseHeader(std::string &buf, const std::string &key) {
 }
 
 void encode_headers_impl(const std::map<std::string, std::string> &headers, std::string &buf) {
-    /*
-    bool hasDate = false;
-    auto it = headers.cbegin();
-    while (it != headers.cend()) {
+
+    bool has_date = false;
+    for (auto it = headers.begin(); it != headers.end(); ++it) {
         const std::string &key = it->first;
         const std::string &value = it->second;
-        if (!hasDate && key == std::string("date")) {
-            hasDate = true;
+        if (!has_date && key == "date") {
+            has_date = true;
         }
 
+        uint32_t index = full_match_mdelem_data_index(key, value);
+        if (index > 0) {
+            // TODO(SHADOW)
+            continue;
+        }
         auto staticIt = hpackStaticHeadersCode.find(key);
         if (staticIt != hpackStaticHeadersCode.end()) {
             buf.append(staticIt->second, 2);
@@ -70,8 +75,6 @@ void encode_headers_impl(const std::map<std::string, std::string> &headers, std:
             encode_uint16(buf, value.length(), INT_MASK(7));
             buf.append(value);
         }
-
-        ++it;
     }
 
     if (!hasDate) {
@@ -86,7 +89,7 @@ void encode_headers_impl(const std::map<std::string, std::string> &headers, std:
         buf.append("\x0f\x12\x1d", 3);
         buf.append(date);
     }
-    */
+    * /
 }
 
 std::string encode_headers(const std::map<std::string, std::string> &headers) {
