@@ -4,12 +4,12 @@
 #include <string>
 #include <vector>
 
-#include "src/hpack/metadata.h"
+#include "src/hpack/static_metadata.h"
 
 namespace hpack {
 class headers {
 public:
-    explicit headers(std::function<void(metadata_element *)> notifier);
+    explicit headers(std::function<void(mdelem_data *)> notifier);
     ~headers();
 
     // parse FRAME - HEADER payload
@@ -17,12 +17,12 @@ public:
     int decode_headers(const uint8_t *buf, const uint8_t *buf_end);
 
 private:
-    std::function<void(metadata_element *)> _notifier;
+    std::function<void(mdelem_data *)> _notifier;
 
     int _dynamic_table_size;
     int _max_dynamic_table_size;
     int _max_table_size;
 
-    std::vector<metadata_payload> _dynamic_table;
+    std::vector<mdelem_data> _dynamic_table;
 };
 }  // namespace hpack

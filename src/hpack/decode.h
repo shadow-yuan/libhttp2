@@ -3,8 +3,6 @@
 #include <stdint.h>
 #include <string>
 
-#define INT_MASK(bits) (1 << bits) - 1
-
 namespace hpack {
 
 const uint8_t *decode_uint16(const uint8_t *src, const uint8_t *src_end, uint16_t &dst, uint8_t mask);

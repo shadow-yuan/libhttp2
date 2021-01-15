@@ -1,5 +1,6 @@
 #include "src/hpack/decode.h"
 #include "src/hpack/huffman.h"
+#include "src/utils/useful.h"
 
 namespace hpack {
 // This decodes an uint, it returns nullptr if it tries to read past end

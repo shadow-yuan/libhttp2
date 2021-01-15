@@ -3,21 +3,21 @@
 #include "src/hpack/static_metadata.h"
 #include "src/hpack/decode.h"
 #include "src/http2/errors.h"
+#include "src/utils/useful.h"
 
 inline bool is_valid_header(const std::string &k, const std::string &v) {
     return k != std::string("connection") && (k != std::string("te") || v == std::string("trailers"));
 }
 
 bool string_starts_with(const std::string &str, char c) {
-    if (str.empty())
-        return false;
+    if (str.empty()) return false;
     return (str[0] == c);
 }
 
 // -------------------------------------------
 namespace hpack {
 
-headers::headers(std::function<void(metadata_element *)> notifier)
+headers::headers(std::function<void(mdelem_data *)> notifier)
     : _notifier(notifier)
     , _dynamic_table_size(0)
     , _max_dynamic_table_size(0)
@@ -25,7 +25,7 @@ headers::headers(std::function<void(metadata_element *)> notifier)
 }
 
 int headers::decode_headers(const uint8_t *buf, const uint8_t *buf_end) {
-    static_metadata *hpack_static_headers = get_static_metadata_table();
+    static_metadata *hpack_static_headers = get_static_mdelem_table();
     while (buf < buf_end) {
         uint16_t intValue(0);
         if (*buf & 0x80) {
@@ -44,7 +44,7 @@ int headers::decode_headers(const uint8_t *buf, const uint8_t *buf_end) {
                 return HTTP2_COMPRESSION_ERROR;
             }
 
-            metadata_element mdel;
+            mdelem_data mdel;
             // Table 1: Static Table Entries (max entries 61)
             if (intValue > 61) {
 
@@ -52,8 +52,7 @@ int headers::decode_headers(const uint8_t *buf, const uint8_t *buf_end) {
                 // std::endl;
                 intValue -= 61 + 1;
                 if (intValue < int64_t(_dynamic_table.size())) {
-                    auto payload = _dynamic_table[intValue];
-                    mdel = get_metadata_element_from_payload(payload);
+                    mdel = _dynamic_table[intValue];
                 } else {
                     return HTTP2_COMPRESSION_ERROR;
                 }
@@ -103,11 +102,9 @@ int headers::decode_headers(const uint8_t *buf, const uint8_t *buf_end) {
                 _max_dynamic_table_size = intValue;
                 while (_dynamic_table_size > _max_dynamic_table_size && !_dynamic_table.empty()) {
                     auto entry = _dynamic_table.back();
-                    auto element = get_metadata_element_from_payload(entry);
-                    auto element_size = get_metadata_element_size(element);
+                    auto element_size = MDELEM_SIZE(entry);
                     _dynamic_table_size -= element_size + 32;
                     _dynamic_table.pop_back();
-                    medata_element_payload_free(entry);
                 }
 
                 continue;
@@ -130,8 +127,7 @@ int headers::decode_headers(const uint8_t *buf, const uint8_t *buf_end) {
                     intValue -= 61 + 1;
                     if (intValue < int64_t(_dynamic_table.size())) {
                         auto entry = _dynamic_table[intValue];
-                        auto element = get_metadata_element_from_payload(entry);
-                        key = element.key.to_string();
+                        key = entry.key.to_string();
                     } else {
                         return HTTP2_COMPRESSION_ERROR;
                     }
@@ -155,28 +151,22 @@ int headers::decode_headers(const uint8_t *buf, const uint8_t *buf_end) {
 
             // printf("got key/value: %s -> %s\n", key.c_str(), value.c_str());
 
-            metadata_element mdel;
+            mdelem_data mdel;
             mdel.key.assign(key);
             mdel.value.assign(value);
             _notifier(&mdel);
 
             if (add_to_dynamic_table) {
-                const int size = get_metadata_element_size(mdel) + 32;
+                const int size = MDELEM_SIZE(mdel) + 32;
                 while (size + _dynamic_table_size > _max_dynamic_table_size && !_dynamic_table.empty()) {
                     const auto entry = _dynamic_table.back();
-                    auto element = get_metadata_element_from_payload(entry);
-                    auto element_size = get_metadata_element_size(element);
+                    auto element_size = MDELEM_SIZE(entry);
                     _dynamic_table_size -= element_size + 32;
                     _dynamic_table.pop_back();
-                    medata_element_payload_free(entry);
                 }
 
                 if (size + _dynamic_table_size <= _max_dynamic_table_size) {
-                    auto element = new metadata_element;
-                    element->key = mdel.key;
-                    element->value = mdel.value;
-                    auto payload = MAKE_METADATA_PAYLOAD(element, METADATA_STORAGE_DYNAMIC);
-                    _dynamic_table.push_back(payload);
+                    _dynamic_table.push_back(mdel);
                     _dynamic_table_size += size;
                 }
             }

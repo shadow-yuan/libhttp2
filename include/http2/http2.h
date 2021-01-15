@@ -4,6 +4,12 @@
 #include <memory>
 
 namespace http2 {
+class InitService {
+public:
+    virtual ~InitService() {}
+    virtual void init() = 0;
+    virtual void shutdown() = 0;
+};
 
 /* Call this interface to send tcp data */
 class TcpSendService {
