@@ -21,15 +21,10 @@ public:
     void received_data(uint16_t cid, const void *buf, size_t len);
     void connection_leave(uint64_t cid);
 
-    /*
-        bool ConnectionComming(uint64_t cid);
-        bool ConnectionClosed(uint64_t cid);
-
-        void ReceivedHttp2Data(uint64_t cid, const uint8_t *buff, size_t buff_size);
-    */
 private:
-    bool is_connection_exist(uint64_t cid, std::shared_ptr<http2_connection> *conn = nullptr);
-    std::shared_ptr<http2_connection> create_connection(uint64_t cid, bool client);
+    bool is_connection_exist(uint64_t cid);
+    std::shared_ptr<http2_connection> create_connection(uint64_t cid);
+    std::shared_ptr<http2_connection> find_connection(uint64_t cid);
     bool destroy_connection(uint64_t cid);
 
 private:

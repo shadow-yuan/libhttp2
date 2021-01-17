@@ -26,9 +26,9 @@ int http2_transport::check_package_length(uint64_t cid, const void *data, size_t
 }
 
 void http2_transport::connection_enter(uint64_t cid, bool client) {
-    std::shared_ptr<http2_connection> conn = create_connection(cid, client);
+    std::shared_ptr<http2_connection> conn = create_connection(cid);
     if (conn != nullptr) {
-        ;
+        conn->create_stream(client);
     }
 }
 
@@ -43,25 +43,28 @@ void http2_transport::connection_leave(uint64_t cid) {
     destroy_connection(cid);
 }
 
-bool http2_transport::is_connection_exist(uint64_t cid, std::shared_ptr<http2_connection> *conn) {
-    for (auto i : _connections) {
-        if (i != nullptr && i->get_cid() == cid) {
-            if (conn != nullptr) {
-                *conn = i;
-            }
-            return true;
-        }
-    }
-    return false;
+bool http2_transport::is_connection_exist(uint64_t cid) {
+    return find_connection(cid);
 }
 
-std::shared_ptr<http2_connection> http2_transport::create_connection(uint64_t cid, bool client) {
-    std::shared_ptr<http2_connection> conn;
-    if (!is_connection_exist(cid, &conn)) {
+std::shared_ptr<http2_connection> http2_transport::create_connection(uint64_t cid) {
+    std::shared_ptr<http2_connection> conn = find_connection(cid);
+    if (conn == nullptr) {
         conn = std::make_shared<http2_connection>(cid);
         _connections.push_back(conn);
     }
     return conn;
+}
+
+std::shared_ptr<http2_connection> http2_transport::find_connection(uint64_t cid) {
+    for (auto conn : _connections) {
+        if (conn != nullptr && conn->get_cid() == cid) {
+            if (conn != nullptr) {
+                return conn;
+            }
+        }
+    }
+    return nullptr;
 }
 
 bool http2_transport::destroy_connection(uint64_t cid) {

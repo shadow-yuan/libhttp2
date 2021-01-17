@@ -39,7 +39,7 @@ http2_errors parse_data(size_t &offset, const uint8_t *data, size_t len, http2_f
         +---------------------------------------------------------------+
     */
     frame->data.pad_len = 0;
-    if (frame->head.flag == HTTP2_FLAG_PADDED) {
+    if (frame->head.flag & HTTP2_FLAG_PADDED) {
         frame->data.pad_len = *(data + offset);
         if (frame->data.pad_len >= frame->head.payload_length) {
             return HTTP2_PROTOCOL_ERROR;
@@ -75,16 +75,15 @@ http2_errors parse_headers(size_t offset, const uint8_t *data, size_t len, http2
     size_t block_len = frame->head.payload_length;
     frame->headers.stream_id = 0;
     frame->headers.weight = 0;
-    switch (frame->head.flag) {
-    case HTTP2_FLAG_PADDED: {
+    if (frame->head.flag & HTTP2_FLAG_PADDED) {
         frame->headers.pad_len = *reinterpret_cast<const uint8_t *>(data + offset);
         if (frame->headers.pad_len >= frame->head.payload_length) {
             return HTTP2_PROTOCOL_ERROR;
         }
         offset += sizeof(uint8_t);
         block_len -= sizeof(uint8_t) + frame->headers.pad_len;
-    } break;
-    case HTTP2_FLAG_PRIORITY: {
+    }
+    if (frame->head.flag & HTTP2_FLAG_PRIORITY) {
         frame->headers.stream_id = get_uint32_from_big_endian(data + offset);
         offset += sizeof(uint32_t);
         block_len -= sizeof(uint32_t);
@@ -94,7 +93,6 @@ http2_errors parse_headers(size_t offset, const uint8_t *data, size_t len, http2
         if (frame->headers.stream_id == 0) {
             return HTTP2_PROTOCOL_ERROR;
         }
-    } break;
     }
     frame->headers.header_block_fragment =
         slice(reinterpret_cast<const void *>(data + offset), block_len, slice::STATIC);
@@ -171,7 +169,7 @@ http2_errors parse_promise(size_t offset, const uint8_t *data, size_t len, http2
         +---------------------------------------------------------------+
     */
     size_t block_len = frame->head.payload_length;
-    if (frame->head.flag == HTTP2_FLAG_PADDED) {
+    if (frame->head.flag & HTTP2_FLAG_PADDED) {
         frame->promise.pad_len = *(data + offset);
         if (frame->headers.pad_len >= frame->head.payload_length) {
             return HTTP2_PROTOCOL_ERROR;
@@ -270,6 +268,25 @@ http2_errors parse_continuation(size_t offset, const uint8_t *data, size_t len, 
     |                   Frame Payload (0...)                      ...
     +---------------------------------------------------------------+
 */
+
+typedef http2_errors (*parser_func)(const uint8_t *, size_t, http2_frame *);
+struct internal_parser {
+    http2_frame_type type;
+    parser_func func;
+};
+internal_parser parser_funcs[] = {
+    {HTTP2_FRAME_DATA, parse_data},
+    {HTTP2_FRAME_DATA, parse_data},
+    {HTTP2_FRAME_HEADERS, parse_headers},
+    {HTTP2_FRAME_RST_STREAM, parse_rst_stream},
+    {HTTP2_FRAME_SETTINGS, parse_settings},
+    {HTTP2_FRAME_PUSH_PROMISE, parse_promise},
+    {HTTP2_FRAME_PING, parse_ping},
+    {HTTP2_FRAME_GOAWAY, parse_goaway},
+    {HTTP2_FRAME_WINDOW_UPDATE, parse_window_update},
+    {HTTP2_FRAME_CONTINUATION, parse_continuation},
+};
+
 http2_errors http2_parse(const uint8_t *data, size_t len, http2_frame *frame) {
     if (frame == nullptr) {
         return HTTP2_NO_ERROR;
@@ -279,6 +296,12 @@ http2_errors http2_parse(const uint8_t *data, size_t len, http2_frame *frame) {
     if (err != HTTP2_NO_ERROR) {
         return err;
     }
+    for (size_t i = 0; i < (sizeof(parser_funcs) / sizeof(internal_parser)); i++) {
+        if (parser_funcs[i].type == frame->head.type) {
+            return parser_funcs[i].func();
+        }
+    }
+    /*
     switch (frame->head.type) {
     case HTTP2_FRAME_DATA: {
         return parse_data(offset, data, len, frame);
@@ -311,7 +334,7 @@ http2_errors http2_parse(const uint8_t *data, size_t len, http2_frame *frame) {
         return parse_continuation(offset, data, len, frame);
     } break;
     }
-
+*/
     return HTTP2_PROTOCOL_ERROR;
 }
 
