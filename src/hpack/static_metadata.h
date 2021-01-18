@@ -3,19 +3,13 @@
 #include <assert.h>
 #include <stddef.h>
 #include <stdint.h>
-#include <string>
 
-#include "src/utils/slice.h"
+#include "src/hpack/metadata.h"
 
 #define HPACK_STATIC_MDELEM_COUNT 85
 #define HPACK_STATIC_MDELEM_STANDARD_COUNT 61
 
 namespace hpack {
-
-typedef struct {
-    slice key;
-    slice value;
-} mdelem_data;
 
 class static_metadata {
 public:
@@ -41,7 +35,5 @@ inline hpack::static_metadata *get_static_mdelem_table() {
     return hpack::g_static_mdelem_table;
 }
 
-#define MDELEM_SIZE(mdel) ((mdel).key.size() + (mdel).value.size())
-
 // Return 0 means not found
-uint32_t full_match_mdelem_data_index(const std::string &key, const std::string &value);
+uint32_t full_match_static_mdelem_index(const hpack::mdelem_data &mdel);

@@ -4,6 +4,7 @@
 #include "src/hpack/decode.h"
 #include "src/http2/errors.h"
 #include "src/utils/useful.h"
+#include "src/hpack/encode.h"
 
 inline bool is_valid_header(const std::string &k, const std::string &v) {
     return k != std::string("connection") && (k != std::string("te") || v == std::string("trailers"));
@@ -17,17 +18,15 @@ bool string_starts_with(const std::string &str, char c) {
 // -------------------------------------------
 namespace hpack {
 
-headers::headers(std::function<void(mdelem_data *)> notifier)
-    : _notifier(notifier)
-    , _dynamic_table_size(0)
-    , _max_dynamic_table_size(0)
-    , _max_table_size(4096) {  // SETTINGS_HEADER_TABLE_SIZE
+headers::headers(std::function<void(mdelem_data *)> callback)
+    : _decoded_hd_list_callback(callback)
+    , _dynamic_table(4096) {  // SETTINGS_HEADER_TABLE_SIZE
 }
 
 int headers::decode_headers(const uint8_t *buf, const uint8_t *buf_end) {
     static_metadata *hpack_static_headers = get_static_mdelem_table();
     while (buf < buf_end) {
-        uint16_t intValue(0);
+        uint16_t int_value = 0;
         if (*buf & 0x80) {
             /*  6.1 Indexed Header Field Representation
 
@@ -36,32 +35,31 @@ int headers::decode_headers(const uint8_t *buf, const uint8_t *buf_end) {
                 | 1 |        Index (7+)         |
                 +---+---------------------------+
              */
-            buf = decode_uint16(buf, buf_end, intValue, INT_MASK(7));
+            buf = decode_uint16(buf, buf_end, int_value, INT_MASK(7));
             // std::cout << "6.1 Indexed Header Field Representation : "
-            // << "index is " << intValue << std::endl;
+            // << "index is " << int_value << std::endl;
 
-            if (!buf || intValue == 0) {
+            if (!buf || int_value == 0) {
                 return HTTP2_COMPRESSION_ERROR;
             }
 
             mdelem_data mdel;
             // Table 1: Static Table Entries (max entries 61)
-            if (intValue > 61) {
+            if (int_value > HPACK_STATIC_MDELEM_STANDARD_COUNT) {
 
-                // std::cout << "dynamic table lookup index: " << intValue << ", count: " << _dynamic_table.size() <<
+                // std::cout << "dynamic table lookup index: " << int_value << ", count: " << _dynamic_table.size() <<
                 // std::endl;
-                intValue -= 61 + 1;
-                if (intValue < int64_t(_dynamic_table.size())) {
-                    mdel = _dynamic_table[intValue];
-                } else {
+                int_value -= HPACK_STATIC_MDELEM_STANDARD_COUNT + 1;
+                if (!_dynamic_table.get_mdelem_data(int_value, &mdel)) {
                     return HTTP2_COMPRESSION_ERROR;
                 }
+
             } else {
-                const auto sm = hpack_static_headers[intValue - 1];
+                const auto sm = hpack_static_headers[int_value];
                 mdel = sm.data();
             }
 
-            _notifier(&mdel);
+            _decoded_hd_list_callback(&mdel);
 
         } else {
             bool add_to_dynamic_table = false;
@@ -77,7 +75,7 @@ int headers::decode_headers(const uint8_t *buf, const uint8_t *buf_end) {
                     | Value String (Length octets)  |
                     +-------------------------------+
                  */
-                buf = decode_uint16(buf, buf_end, intValue, INT_MASK(6));
+                buf = decode_uint16(buf, buf_end, int_value, INT_MASK(6));
                 if (!buf) {
                     return HTTP2_COMPRESSION_ERROR;
                 }
@@ -92,87 +90,103 @@ int headers::decode_headers(const uint8_t *buf, const uint8_t *buf_end) {
                     | 0 | 0 | 1 |   Max size (5+)   |
                     +---+---------------------------+
                  */
-                buf = decode_uint16(buf, buf_end, intValue, INT_MASK(5));
-                // printf("Dynamic Table Size Update: max_table_size(%d) =>change to (%d)\n", _max_table_size,
-                // int(intValue));
-                if (!buf || intValue > _max_table_size) {
+                buf = decode_uint16(buf, buf_end, int_value, INT_MASK(5));
+
+                // The new maximum size MUST be lower than or equal to the limit
+                // determined by the protocol using HPACK.
+                if (!buf || int_value > _dynamic_table.max_table_size_limit()) {
                     return HTTP2_COMPRESSION_ERROR;
                 }
-
-                _max_dynamic_table_size = intValue;
-                while (_dynamic_table_size > _max_dynamic_table_size && !_dynamic_table.empty()) {
-                    auto entry = _dynamic_table.back();
-                    auto element_size = MDELEM_SIZE(entry);
-                    _dynamic_table_size -= element_size + 32;
-                    _dynamic_table.pop_back();
-                }
-
+                _dynamic_table.update_max_table_size(int_value);
                 continue;
+
             } else {
                 // 6.2.2 Literal Header Field without Indexing
                 // 6.2.3 Literal Header Field Never Indexed
-                buf = decode_uint16(buf, buf_end, intValue, INT_MASK(4));
+                /*
+                      0   1   2   3   4   5   6   7
+                    +---+---+---+---+---+---+---+---+
+                    | 0 | 0 | 0 | 1 |  Index (4+)   |
+                    +---+---+-----------------------+
+                    | H |     Value Length (7+)     |
+                    +---+---------------------------+
+                    | Value String (Length octets)  |
+                    +-------------------------------+
+                 */
+                buf = decode_uint16(buf, buf_end, int_value, INT_MASK(4));
                 if (!buf) {
                     return HTTP2_COMPRESSION_ERROR;
                 }
             }
 
-            std::string key;
-            std::string value;
+            mdelem_data mdel;
 
-            if (intValue > 61) {
+            if (int_value > HPACK_STATIC_MDELEM_STANDARD_COUNT) {
                 if (add_to_dynamic_table) {
                     // 6.2.1 Literal Header Field with Incremental Indexing
                     // Indexed Name
-                    intValue -= 61 + 1;
-                    if (intValue < int64_t(_dynamic_table.size())) {
-                        auto entry = _dynamic_table[intValue];
-                        key = entry.key.to_string();
-                    } else {
+                    int_value -= HPACK_STATIC_MDELEM_STANDARD_COUNT + 1;
+                    if (!_dynamic_table.get_mdelem_data(int_value, &mdel)) {
                         return HTTP2_COMPRESSION_ERROR;
                     }
                 } else {
                     return HTTP2_COMPRESSION_ERROR;
                 }
-            } else if (intValue != 0) {
-                const auto sm = hpack_static_headers[intValue - 1];
-                key = sm.data().key.to_string();
+            } else if (int_value != 0) {
+                const auto sm = hpack_static_headers[int_value];
+                mdel.key = sm.data().key;
             } else {
+                std::string key;
                 buf = parse_string_key(key, buf, buf_end);
                 if (!buf) {
                     return HTTP2_PROTOCOL_ERROR;
                 }
+                mdel.key.assign(key);
             }
 
+            std::string value;
             buf = parse_string(value, buf, buf_end);
             if (!buf) {
                 return HTTP2_COMPRESSION_ERROR;
             }
 
-            // printf("got key/value: %s -> %s\n", key.c_str(), value.c_str());
-
-            mdelem_data mdel;
-            mdel.key.assign(key);
             mdel.value.assign(value);
-            _notifier(&mdel);
+
+            _decoded_hd_list_callback(&mdel);
 
             if (add_to_dynamic_table) {
-                const int size = MDELEM_SIZE(mdel) + 32;
-                while (size + _dynamic_table_size > _max_dynamic_table_size && !_dynamic_table.empty()) {
-                    const auto entry = _dynamic_table.back();
-                    auto element_size = MDELEM_SIZE(entry);
-                    _dynamic_table_size -= element_size + 32;
-                    _dynamic_table.pop_back();
-                }
-
-                if (size + _dynamic_table_size <= _max_dynamic_table_size) {
-                    _dynamic_table.push_back(mdel);
-                    _dynamic_table_size += size;
-                }
+                _dynamic_table.push_mdelem_data(mdel);
             }
         }
     }
 
     return HTTP2_NO_ERROR;
 }
+
+std::string headers::encode_headers(const std::vector<mdelem_data> &headers) {
+    std::string header_block_fragment;
+    for (size_t i = 0; i < headers.size(); i++) {
+        const mdelem_data &mdel = headers[i];
+
+        // step 1. find static metadata table
+        uint32_t static_index = full_match_static_mdelem_index(mdel);
+        if (static_index > 0) {
+            header_block_fragment += encode_index(static_index);
+            continue;
+        }
+
+        // step 2. find dynamic metadata table
+        uint32_t dynamic_index = _dynamic_table.get_mdelem_data_index(mdel);
+        if (dynamic_index >= 0) {
+            dynamic_index += HPACK_STATIC_MDELEM_STANDARD_COUNT + 1;
+            header_block_fragment += encode_index(dynamic_index);
+            continue;
+        }
+
+        // step 3. <6.2.1 Literal Header Field with Incremental Indexing>
+        header_block_fragment += encode_with_incremental_indexing(mdel);
+    }
+    return header_block_fragment;
+}
+
 }  // namespace hpack

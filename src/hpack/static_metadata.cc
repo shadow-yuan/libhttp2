@@ -140,7 +140,6 @@ struct static_metadata_context {
         static_metadata(make_static_slice("accept-encoding"), make_static_slice("gzip"), 84),
         static_metadata(make_static_slice("accept-encoding"), make_static_slice("identity,gzip"), 85),
     };
-    std::multimap<uint32_t, uint32_t> hash_table;
 };  // struct static_metadata_context
 
 static static_metadata_context *g_static_metadata_ctx = nullptr;
@@ -151,12 +150,6 @@ void init_static_metadata_context(void) {
     if (!hpack::g_static_metadata_ctx) {
         hpack::g_static_metadata_ctx = new hpack::static_metadata_context();
         hpack::g_static_mdelem_table = hpack::g_static_metadata_ctx->static_mdelem_table;
-
-        for (size_t i = 1; i <= HPACK_STATIC_MDELEM_COUNT; i++) {
-            auto hash = hpack::g_static_mdelem_table[i].hash();
-            auto index = hpack::g_static_mdelem_table[i].index();
-            hpack::g_static_metadata_ctx->hash_table.insert({hash, index});
-        }
     }
 }
 
@@ -168,18 +161,10 @@ void destroy_static_metadata_context(void) {
     }
 }
 
-uint32_t full_match_mdelem_data_index(const std::string &key, const std::string &value) {
-    uint32_t hash = get_slice_hash(key);
-    auto pr = hpack::g_static_metadata_ctx->hash_table.equal_range(hash);
-    if (pr.first == hpack::g_static_metadata_ctx->hash_table.end()) {
-        return 0;
-    }
-
-    for (auto it = pr.first; it != pr.second; ++it) {
-        uint32_t index = it->second;
-        const auto &mdel = hpack::g_static_mdelem_table[index].data();
-        if (mdel.key.compare(key) && mdel.value.compare(value)) {
-            return index;
+uint32_t full_match_static_mdelem_index(const hpack::mdelem_data &mdel) {
+    for (size_t i = 1; i <= HPACK_STATIC_MDELEM_STANDARD_COUNT; i++) {
+        if (mdel == hpack::g_static_mdelem_table[i].data()) {
+            return i;
         }
     }
     return 0;

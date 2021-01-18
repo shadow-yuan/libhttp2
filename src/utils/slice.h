@@ -33,6 +33,11 @@ public:
     void assign(const std::string &s);
     bool compare(const std::string &s) const;
 
+    bool operator==(const slice &oth) const;
+    bool operator!=(const slice &&oth) const {
+        return !(this->operator==(oth));
+    }
+
 private:
     friend slice MakeSliceByLength(size_t len);
     friend slice operator+(slice s1, slice s2);

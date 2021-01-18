@@ -195,6 +195,17 @@ bool slice::compare(const std::string &s) const {
     return memcmp(data(), s.data(), size()) == 0;
 }
 
+bool slice::operator==(const slice &s) const {
+    if (s.empty() && empty()) {
+        return true;
+    }
+    if (s.size() != size()) {
+        return false;
+    }
+
+    return memcmp(data(), s.data(), size()) == 0;
+}
+
 slice MakeSliceByLength(size_t len) {
     slice s;
     s._refs = reinterpret_cast<slice_refcount *>(new uint8_t[(sizeof(slice_refcount) + len)]);

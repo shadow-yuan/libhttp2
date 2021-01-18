@@ -1,136 +1,135 @@
 #include "src/hpack/encode.h"
 #include <time.h>
 #include "src/utils/useful.h"
-#include "src/hpack/static_metadata.h"
 
 namespace hpack {
 
-// Http1.1 DATE FORMAT
-// Date: Tue, 03 Jul 2012 04:40:59 GMT
-std::string build_date_string() {
-    char buf[64] = {0};
-    time_t now = time(nullptr);
-    struct tm *gmt = gmtime(&now);
-    strftime(buf, sizeof(buf), "%a, %d %h %G %T GMT", gmt);  // strlen(buf) = 29
-    return std::string(buf);
-}
-
-void encode_uint16_impl(std::string &buf, int I, uint8_t mask) {
+size_t encode_uint16_impl(uint8_t *buf, int I, uint8_t mask) {
     if (I < mask) {
-        buf.append(1, char(I));
-        return;
+        *buf = static_cast<uint8_t>(I);
+        return 1;
     }
+
+    uint8_t *tmp = buf;
 
     I -= mask;
-    buf.append(1, char(mask));
+    *buf++ = mask;
+
     while (I >= 128) {
-        buf.append(1, char((I & 0x7f) | 0x80));
+        *buf++ = static_cast<uint8_t>((I & 0x7f) | 0x80);
         I = I >> 7;
     }
-    buf.append(1, char(I));
+    *buf++ = static_cast<uint8_t>(I);
+    return buf - tmp;
 }
 
-std::string encode_uint16(int I, uint8_t mask) {
-    std::string buf;
-    encode_uint16_impl(buf, I, mask);
-    return buf;
+slice encode_uint16(int I, uint8_t mask) {
+    uint8_t buf[128] = {0};
+    size_t n = encode_uint16_impl(buf, I, mask);
+    return slice(buf, n);
 }
 
-void encodeH2caseHeader(std::string &buf, const std::string &key) {
-    std::string buf = encode_uint16(key.length(), INT_MASK(7));
-    for (auto keyIt : key) {
-        if (isalpha(keyIt)) {
-            buf.append(1, tolower(keyIt));
-        } else if (keyIt == char('_')) {
-            buf.append(1, '-');
-        } else {
-            buf.append(1, keyIt);
-        }
-    }
+slice encode_mdelem_data(const mdelem_data &mdel, uint8_t key) {
+    uint8_t buf[1024] = {0};
+    buf[0] = key;
+
+    size_t n = encode_uint16_impl(&buf[1], mdel.key.size(), INT_MASK(7));
+    memcpy(&buf[n + 1], mdel.key.data(), mdel.key.size());
+
+    uint8_t *temp = buf + 1 + n + mdel.key.size();
+    n = encode_uint16_impl(temp, mdel.value.size(), INT_MASK(7));
+    memcpy(&temp[n], mdel.value.data(), mdel.value.size());
+    temp += n + mdel.value.size();
+
+    n = temp - buf;
+    return slice(buf, n);
 }
 
-void encode_headers_impl(const std::map<std::string, std::string> &headers, std::string &buf) {
-
-    bool has_date = false;
-    for (auto it = headers.begin(); it != headers.end(); ++it) {
-        const std::string &key = it->first;
-        const std::string &value = it->second;
-
-        if (!has_date && key == "date") {
-            auto date = build_date_string();
-            // 0f12 Date header not indexed
-            // 1d = date length: 29
-            buf.append("\x0f\x12\x1d", 3);
-            buf.append(date);
-            has_date = true;
-            continue;
-        }
-
-        uint32_t index = full_match_mdelem_data_index(key, value);
-        if (index > 0) {
-            // already in static table
-            uint8_t b = static_cast<uint8_t>(0x80 | (index & 0xff));
-            buf.append(1, b);
-            continue;
-        }
-        // RFC 7541 6.2.1
-        /*
-              0   1   2   3   4   5   6   7
-            +---+---+---+---+---+---+---+---+
-            | 0 | 1 |           0           |
-            +---+---+-----------------------+
-            | H |     Name Length (7+)      |
-            +---+---------------------------+
-            |  Name String (Length octets)  |
-            +---+---------------------------+
-            | H |     Value Length (7+)     |
-            +---+---------------------------+
-            | Value String (Length octets)  |
-            +-------------------------------+
-         */
-
-        buf.append(1, 0x40);
-
-        encode_uint16_impl(buf, key.size(), INT_MASK(7));
-        buf.append(key);
-
-        encode_uint16_impl(buf, value.size(), INT_MASK(7));
-        buf.append(value);
-    }
+// 6.1 Indexed Header Field Representation
+slice encode_index(uint32_t index) {
+    /*
+          0   1   2   3   4   5   6   7
+        +---+---+---+---+---+---+---+---+
+        | 1 |        Index (7+)         |
+        +---+---------------------------+
+     */
+    uint8_t buf[128] = {0};
+    size_t n = encode_uint16_impl(buf, static_cast<int>(index), INT_MASK(7));
+    buf[0] |= 0x80;
+    return slice(buf, n);
 }
 
-std::string encode_headers(const std::map<std::string, std::string> &headers) {
-    std::string buf;
-    encode_headers_impl(headers, buf);
-    return buf;
+// 6.3.  Dynamic Table Size Update
+slice encode_update_max_size(uint32_t max_size) {
+    /*
+          0   1   2   3   4   5   6   7
+        +---+---+---+---+---+---+---+---+
+        | 0 | 0 | 1 |   Max size (5+)   |
+        +---+---------------------------+
+     */
+    uint8_t buf[128] = {0};
+    size_t n = encode_uint16_impl(buf, max_size, INT_MASK(5));
+    buf[0] |= 0x20;
+    return slice(buf, n);
 }
 
-std::string encode_headers(int status, const std::map<std::string, std::string> &headers) {
-    std::string buf;
-    if (status == 200) {
-        buf.append(1, char(0x88));
-    } else if (status == 204) {
-        buf.append(1, char(0x89));
-    } else if (status == 206) {
-        buf.append(1, char(0x8A));
-    } else if (status == 304) {
-        buf.append(1, char(0x8B));
-    } else if (status == 400) {
-        buf.append(1, char(0x8C));
-    } else if (status == 404) {
-        buf.append(1, char(0x8D));
-    } else if (status == 500) {
-        buf.append(1, char(0x8E));
-    } else {
-        buf.append(1, char(0x08));
+// 6.2.1 Literal Header Field with Incremental Indexing
+slice encode_with_incremental_indexing(const mdelem_data &mdel) {
+    /*
+          0   1   2   3   4   5   6   7
+        +---+---+---+---+---+---+---+---+
+        | 0 | 1 |           0           |
+        +---+---+-----------------------+
+        | H |     Name Length (7+)      |
+        +---+---------------------------+
+        |  Name String (Length octets)  |
+        +---+---------------------------+
+        | H |     Value Length (7+)     |
+        +---+---------------------------+
+        | Value String (Length octets)  |
+        +-------------------------------+
+     */
 
-        const std::string status_str = std::to_string(status);
-        encode_uint16_impl(buf, status_str.length(), INT_MASK(4));
-        buf.append(status_str);
-    }
-
-    encode_headers_impl(headers, buf);
-    return buf;
+    return encode_mdelem_data(mdel, 0x40);
 }
 
+// 6.2.2 Literal Header Field without Indexing
+slice encode_without_indexing(const mdelem_data &mdel) {
+    /*
+          0   1   2   3   4   5   6   7
+        +---+---+---+---+---+---+---+---+
+        | 0 | 0 | 0 | 0 |       0       |
+        +---+---+-----------------------+
+        | H |     Name Length (7+)      |
+        +---+---------------------------+
+        |  Name String (Length octets)  |
+        +---+---------------------------+
+        | H |     Value Length (7+)     |
+        +---+---------------------------+
+        | Value String (Length octets)  |
+        +-------------------------------+
+     */
+
+    return encode_mdelem_data(mdel, 0x0);
+}
+
+// 6.2.3 Literal Header Field Never Indexed
+slice encode_never_indexed(const mdelem_data &mdel) {
+    /*
+          0   1   2   3   4   5   6   7
+        +---+---+---+---+---+---+---+---+
+        | 0 | 0 | 0 | 1 |       0       |
+        +---+---+-----------------------+
+        | H |     Name Length (7+)      |
+        +---+---------------------------+
+        |  Name String (Length octets)  |
+        +---+---------------------------+
+        | H |     Value Length (7+)     |
+        +---+---------------------------+
+        | Value String (Length octets)  |
+        +-------------------------------+
+     */
+
+    return encode_mdelem_data(mdel, 0x10);
+}
 }  // namespace hpack
