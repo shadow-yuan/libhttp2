@@ -5,6 +5,8 @@
 
 namespace hpack {
 
+// Http1.1 DATE FORMAT
+// Date: Tue, 03 Jul 2012 04:40:59 GMT
 std::string build_date_string() {
     char buf[64] = {0};
     time_t now = time(nullptr);
@@ -53,43 +55,48 @@ void encode_headers_impl(const std::map<std::string, std::string> &headers, std:
     for (auto it = headers.begin(); it != headers.end(); ++it) {
         const std::string &key = it->first;
         const std::string &value = it->second;
+
         if (!has_date && key == "date") {
+            auto date = build_date_string();
+            // 0f12 Date header not indexed
+            // 1d = date length: 29
+            buf.append("\x0f\x12\x1d", 3);
+            buf.append(date);
             has_date = true;
+            continue;
         }
 
         uint32_t index = full_match_mdelem_data_index(key, value);
         if (index > 0) {
-            // TODO(SHADOW)
+            // already in static table
+            uint8_t b = static_cast<uint8_t>(0x80 | (index & 0xff));
+            buf.append(1, b);
             continue;
         }
-        auto staticIt = hpackStaticHeadersCode.find(key);
-        if (staticIt != hpackStaticHeadersCode.end()) {
-            buf.append(staticIt->second, 2);
+        // RFC 7541 6.2.1
+        /*
+              0   1   2   3   4   5   6   7
+            +---+---+---+---+---+---+---+---+
+            | 0 | 1 |           0           |
+            +---+---+-----------------------+
+            | H |     Name Length (7+)      |
+            +---+---------------------------+
+            |  Name String (Length octets)  |
+            +---+---------------------------+
+            | H |     Value Length (7+)     |
+            +---+---------------------------+
+            | Value String (Length octets)  |
+            +-------------------------------+
+         */
 
-            encode_uint16(buf, value.length(), INT_MASK(7));
-            buf.append(value);
-        } else {
-            buf.append(1, '\x00');
-            encodeH2caseHeader(buf, key);
+        buf.append(1, 0x40);
 
-            encode_uint16(buf, value.length(), INT_MASK(7));
-            buf.append(value);
-        }
+        encode_uint16_impl(buf, key.size(), INT_MASK(7));
+        buf.append(key);
+
+        encode_uint16_impl(buf, value.size(), INT_MASK(7));
+        buf.append(value);
     }
-
-    if (!hasDate) {
-        const std::string date = get_gmt_time();
-        if (date.length() != 29) {
-            // This should never happen but...
-            return;
-        }
-
-        // 0f12 Date header not indexed
-        // 1d = date length: 29
-        buf.append("\x0f\x12\x1d", 3);
-        buf.append(date);
-    }
-    * /
 }
 
 std::string encode_headers(const std::map<std::string, std::string> &headers) {

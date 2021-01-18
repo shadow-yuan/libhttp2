@@ -1,4 +1,5 @@
 #include "src/hpack/decode.h"
+#include <memory>
 #include "src/hpack/huffman.h"
 #include "src/utils/useful.h"
 
@@ -24,46 +25,17 @@ const uint8_t *decode_uint16(const uint8_t *src, const uint8_t *src_end, uint16_
     return ++src;
 }
 
-const uint8_t *decode_string(const uint8_t *src, const uint8_t *src_end, std::string &value, size_t len) {
-    const http2_huff_decode *entry = nullptr;
-    value.reserve(len * 2);  // max compression ratio is >= 0.5
-    uint8_t state = 0;
+const uint8_t *decode_string(const uint8_t *src, size_t src_len, std::string &value, size_t len) {
+    http2_hd_huff_decode_context ctx;
+    http2_head_huffman_decode_context_init(&ctx);
 
-    do {
-        if (entry) {
-            state = entry->state;
-        }
-        entry = huff_decode_table[state] + (*src >> 4);
-
-        if (entry->flags & HUFF_FAIL) {
-            // A decoder decoded an invalid Huffman sequence
-            return nullptr;
-        }
-
-        if (entry->flags & HUFF_SYM) {
-            value.append(1, char(entry->sym));
-        }
-
-        entry = huff_decode_table[entry->state] + (*src & 0x0f);
-
-        if (entry->flags & HUFF_FAIL) {
-            // A decoder decoded an invalid Huffman sequence
-            return nullptr;
-        }
-
-        if ((entry->flags & HUFF_SYM) != 0) {
-            value.append(1, char(entry->sym));
-        }
-
-    } while (++src < src_end);
-
-    if ((entry->flags & HUFF_ACCEPTED) == 0) {
-        // entry->state == 28 // A invalid header name or value character was coded
-        // entry->state != 28 // A decoder decoded an invalid Huffman sequence
+    value.resize(len * 3);
+    int32_t ret = http2_head_huffman_decode(&ctx, reinterpret_cast<uint8_t *>(value.data()), src, src_len, 1);
+    if (ret == -1) {
         return nullptr;
     }
-
-    return src_end;
+    value.resize(ret);
+    return src + src_len;
 }
 
 const uint8_t *parse_string(std::string &dst, const uint8_t *buf, const uint8_t *buf_end) {
@@ -77,7 +49,7 @@ const uint8_t *parse_string(std::string &dst, const uint8_t *buf, const uint8_t 
     }
 
     if (huffman_decode) {
-        buf = decode_string(buf, buf + str_len, dst, str_len);
+        buf = decode_string(buf, str_len, dst, str_len);
         if (!buf) {
             return nullptr;
         }
@@ -102,7 +74,7 @@ const uint8_t *parse_string_key(std::string &dst, const uint8_t *buf, const uint
     }
 
     if (huffman_decode) {
-        buf = decode_string(buf, buf + str_len, dst, str_len);
+        buf = decode_string(buf, str_len, dst, str_len);
         if (!buf) {
             return nullptr;
         }
