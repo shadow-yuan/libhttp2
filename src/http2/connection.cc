@@ -42,7 +42,7 @@ std::shared_ptr<http2_stream> http2_connection::get_stream(uint32_t sid) {
 http2_errors http2_connection::execute_setting(http2_frame *frame) {
     uint32_t stream_id = frame->head.stream_id;
     rm_head_bit(stream_id);
-    if (stream_id) {
+    if (stream_id != 0) {
         return HTTP2_PROTOCOL_ERROR;
     }
     return _settings.excute_frame(frame);
@@ -65,6 +65,8 @@ http2_errors http2_connection::frame_arrived(http2_frame *frame) {
     } break;
     }
 
+    uint32_t stream_id = frame->head.stream_id;
+    rm_head_bit(stream_id);
     std::shared_ptr<http2_stream> stream = get_stream(stream_id);
     if (stream != nullptr) {
         return stream->frame_arrived(frame);

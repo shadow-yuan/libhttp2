@@ -26,10 +26,10 @@ int http2_transport::check_package_length(uint64_t cid, const void *data, size_t
 }
 
 void http2_transport::connection_enter(uint64_t cid, bool client) {
-    std::shared_ptr<http2_connection> conn = create_connection(cid);
-    if (conn != nullptr) {
-        conn->create_stream(client);
-    }
+    std::shared_ptr<http2_connection> conn = create_connection(cid, client);
+    //    if (conn != nullptr) {
+    //        conn->create_stream(client);
+    //    }
 }
 
 void http2_transport::received_data(uint16_t cid, const void *buf, size_t len) {
@@ -44,13 +44,14 @@ void http2_transport::connection_leave(uint64_t cid) {
 }
 
 bool http2_transport::is_connection_exist(uint64_t cid) {
-    return find_connection(cid);
+    return find_connection(cid) == nullptr;
 }
 
-std::shared_ptr<http2_connection> http2_transport::create_connection(uint64_t cid) {
+std::shared_ptr<http2_connection> http2_transport::create_connection(uint64_t cid, bool client) {
     std::shared_ptr<http2_connection> conn = find_connection(cid);
     if (conn == nullptr) {
         conn = std::make_shared<http2_connection>(cid);
+        conn->create_stream(client);
         _connections.push_back(conn);
     }
     return conn;

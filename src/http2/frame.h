@@ -79,6 +79,8 @@ enum http2_frame_flags {
      *  last that the endpoint will send for the identified stream.
      */
     HTTP2_FLAG_END_STREAM = 0x1,
+
+    HTTP2_FLAG_ACK = 0x1,
     /**
      * When set, bit 2 indicates that this frame
      *  contains an entire header block and is not followed
@@ -95,11 +97,6 @@ enum http2_frame_flags {
      *   (E), Stream Dependency, and Weight fields are present;
      */
     HTTP2_FLAG_PRIORITY = 0x20,
-
-    /**
-     * no flag.
-     */
-    HTTP2_FLAG_NONE = 0x0,
 };
 
 struct http2_frame_head {
@@ -175,6 +172,8 @@ struct http2_frame_continuation {
 };
 
 struct http2_frame {
+    http2_frame(){};
+    ~http2_frame(){};
     union {
         http2_frame_head head;
         http2_frame_data data;

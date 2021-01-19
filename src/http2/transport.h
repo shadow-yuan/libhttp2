@@ -23,8 +23,8 @@ public:
 
 private:
     bool is_connection_exist(uint64_t cid);
-    std::shared_ptr<http2_connection> create_connection(uint64_t cid);
-    std::shared_ptr<http2_connection> find_connection(uint64_t cid);
+    std::shared_ptr<http2_connection> http2_transport::find_connection(uint64_t cid);
+    std::shared_ptr<http2_connection> create_connection(uint64_t cid, bool client);
     bool destroy_connection(uint64_t cid);
 
 private:
