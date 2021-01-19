@@ -11,12 +11,16 @@ struct testobject {
     slice s2;
 };
 
-TEST(SliceTest, Empty) {
+TEST(SliceTest, Simple) {
     slice_buffer sb;
     slice s;
+    slice s2 = MakeSliceByLength(128);
     testobject obj;
     obj.s1.assign("Hello");
     obj.s2.assign("World");
+    std::string str("HelloWorld");
+    s = obj.s1 + obj.s2;
+    ASSERT_EQ(s.to_string(), str);
 }
 
 TEST(SliceTest, Deque) {
@@ -28,9 +32,11 @@ TEST(SliceTest, Deque) {
 
     std::deque<testobject> vs;
     vs.push_back(obj);
+    ASSERT_EQ(obj.s1.reference_count(), 2);
+    ASSERT_EQ(obj.s2.reference_count(), 2);
 }
 
-TEST(SliceTest, Simple) {
+TEST(SliceTest, SliceBuffer) {
     slice s("HelloWorld");
     ASSERT_EQ(s.to_string(), std::string("HelloWorld"));
     slice_buffer sb;

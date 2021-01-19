@@ -38,6 +38,8 @@ public:
         return !(this->operator==(oth));
     }
 
+    int32_t reference_count();
+
 private:
     friend slice MakeSliceByLength(size_t len);
     friend slice operator+(slice s1, slice s2);

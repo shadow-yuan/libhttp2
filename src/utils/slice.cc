@@ -12,6 +12,7 @@ public:
 
     void ref();
     void unref();
+    int32_t count();
 
 private:
     std::atomic<int32_t> _refs;
@@ -30,6 +31,10 @@ void slice_refcount::unref() {
     if (n == 1) {
         delete this;
     }
+}
+
+int32_t slice_refcount::count() {
+    return _refs.load(std::memory_order_relaxed);
 }
 
 slice::slice(const void *ptr, size_t length, slice::type t) {
@@ -177,12 +182,7 @@ slice::type slice::get_type() const {
 
 void slice::assign(const std::string &s) {
     slice obj(s.data(), s.size());
-    if (_refs) {
-        _refs->unref();
-    }
-    _refs = std::move(obj._refs);
-    _bytes = std::move(obj._bytes);
-    _length = std::move(obj._length);
+    this->operator=(obj);
 }
 
 bool slice::compare(const std::string &s) const {
@@ -205,6 +205,13 @@ bool slice::operator==(const slice &s) const {
     }
 
     return memcmp(data(), s.data(), size()) == 0;
+}
+
+int32_t slice::reference_count() {
+    if (_refs) {
+        return _refs->count();
+    }
+    return 0;
 }
 
 slice MakeSliceByLength(size_t len) {
