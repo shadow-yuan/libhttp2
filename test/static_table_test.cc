@@ -66,7 +66,7 @@ TEST(StaticMetadataTest, Simple) {
     ASSERT_TRUE(check_static_metadata(table[41].data(), "if-none-match", ""));
     ASSERT_TRUE(check_static_metadata(table[42].data(), "if-range", ""));
     ASSERT_TRUE(check_static_metadata(table[43].data(), "if-unmodified-since", ""));
-    ASSERT_TRUE(check_static_metadata(table[44].data(), "if-modified", ""));
+    ASSERT_TRUE(check_static_metadata(table[44].data(), "last-modified", ""));
     ASSERT_TRUE(check_static_metadata(table[45].data(), "link", ""));
     ASSERT_TRUE(check_static_metadata(table[46].data(), "location", ""));
     ASSERT_TRUE(check_static_metadata(table[47].data(), "max-forwards", ""));

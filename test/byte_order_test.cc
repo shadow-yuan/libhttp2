@@ -7,7 +7,7 @@ TEST(ByteOrderTest, Change) {
     uint16_t n16 = 0x1234;
     uint32_t n32 = 0x12345678;
     uint16_t rn16 = change_byte_order(n16);
-    uint16_t rn32 = change_byte_order(n32);
+    uint32_t rn32 = change_byte_order(n32);
     ASSERT_EQ(rn16, 0x3412);
     ASSERT_EQ(rn32, 0x78563412);
 }

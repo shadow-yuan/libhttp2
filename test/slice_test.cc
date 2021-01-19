@@ -1,3 +1,4 @@
+#include <deque>
 #include <string>
 #include "src/utils/testutil.h"
 #include "src/utils/slice.h"
@@ -5,9 +6,28 @@
 
 class SliceTest {};
 
+struct testobject {
+    slice s1;
+    slice s2;
+};
+
 TEST(SliceTest, Empty) {
     slice_buffer sb;
     slice s;
+    testobject obj;
+    obj.s1.assign("Hello");
+    obj.s2.assign("World");
+}
+
+TEST(SliceTest, Deque) {
+    slice_buffer sb;
+    slice s;
+    testobject obj;
+    obj.s1.assign("Hello");
+    obj.s2.assign("World");
+
+    std::deque<testobject> vs;
+    vs.push_back(obj);
 }
 
 TEST(SliceTest, Simple) {
