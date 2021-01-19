@@ -16,7 +16,7 @@
  *
  */
 
-#include "utils/mpscq.h"
+#include "src/utils/mpscq.h"
 #include <assert.h>
 
 MultiProducerSingleConsumerQueue::MultiProducerSingleConsumerQueue()

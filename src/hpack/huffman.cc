@@ -27,7 +27,7 @@
 #include <string.h>
 #include <stdio.h>
 
-#include "src/utils/byte_convert.h"
+#include "src/utils/byte_order.h"
 
 size_t http2_head_huffman_encode_count(const uint8_t *src, size_t len) {
     size_t i;

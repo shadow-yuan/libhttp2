@@ -19,7 +19,7 @@
 
 #pragma once
 
-#include "utils/atomic.h"
+#include "src/utils/atomic.h"
 
 // Multiple producer single consumer queue
 // If you want to use pop in multiple threads, use LockedMessageQueue

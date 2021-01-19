@@ -1,5 +1,6 @@
 #include "src/utils/slice.h"
 #include <assert.h>
+#include <string.h>
 
 class slice_refcount final {
 public:

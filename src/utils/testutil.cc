@@ -28,7 +28,7 @@
     OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-#include "utils/testutil.h"
+#include "src/utils/testutil.h"
 #include <vector>
 
 namespace test {

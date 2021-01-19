@@ -1,5 +1,5 @@
 #include "src/hpack/encode.h"
-#include <time.h>
+#include <string.h>
 #include "src/utils/useful.h"
 
 namespace hpack {

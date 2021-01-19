@@ -5,7 +5,7 @@
 #include <stdint.h>
 #include <vector>
 
-#include "utils/slice.h"
+#include "src/utils/slice.h"
 
 class slice_buffer final {
 public:

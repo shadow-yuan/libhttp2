@@ -17,7 +17,7 @@ TEST(SliceTest, Simple) {
     sb.add_slice(slice("Hello"));
     sb.add_slice(slice("World"));
     slice m = sb.merge();
-    ASSERT_EQ(s, m);
+    ASSERT_EQ(s.to_string(), m.to_string());
 }
 
 int main(int argc, char **argv) {

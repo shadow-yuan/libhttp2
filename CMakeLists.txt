@@ -1,6 +1,15 @@
 cmake_minimum_required(VERSION 3.10)
 project(libhttp2)
 
+set(CMAKE_C_STANDARD 11)
+set(CMAKE_C_STANDARD_REQUIRED OFF)
+set(CMAKE_C_EXTENSIONS OFF)
+
+# This project requires C++11.
+set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
+
 set(PACKAGE_NAME          "libhttp2")
 set(PACKAGE_VERSION       "1.0.0")
 
@@ -29,7 +38,7 @@ elseif(UNIX)
     set(LIBHTTP2_BASE_LIBRARIES ${CMAKE_DL_LIBS} rt m pthread)
 endif()
 
-option(LIBHTTP2_BUILD_TESTS "Build tests" OFF)
+option(LIBHTTP2_BUILD_TESTS "Build tests" ON)
 
 add_library(http2 STATIC "")
 
@@ -53,7 +62,7 @@ set(HTTP2_SOURCES
 )
 
 set(UTILS_SOURCES
-    "${PROJECT_SOURCE_DIR}/src/utils/byte_convert.cc"
+    "${PROJECT_SOURCE_DIR}/src/utils/byte_order.cc"
     "${PROJECT_SOURCE_DIR}/src/utils/mpscq.cc"
     "${PROJECT_SOURCE_DIR}/src/utils/murmur_hash.cc"
     "${PROJECT_SOURCE_DIR}/src/utils/slice_buffer.cc"
@@ -62,15 +71,16 @@ set(UTILS_SOURCES
 
 target_sources(http2
     PRIVATE
-    "${PROJECT_SOURCE_DIR}/src/http2.cc"
-    "${PROJECT_SOURCE_DIR}/src/init.cc"
+#    "${PROJECT_SOURCE_DIR}/src/http2.cc"
+#    "${PROJECT_SOURCE_DIR}/src/init.cc"
     ${HPACK_SOURCES}
-    ${HTTP2_SOURCES}
+#    ${HTTP2_SOURCES}
     ${UTILS_SOURCES}
 )
 
 target_include_directories(http2
     PRIVATE
+    "${PROJECT_SOURCE_DIR}"
     "${PROJECT_SOURCE_DIR}/include"
 )
 
@@ -92,11 +102,16 @@ if (LIBHTTP2_BUILD_TESTS)
             "${test_file}"
         )
         target_link_libraries("${test_target_name}" http2)
-
+        target_include_directories("${test_target_name}"
+            PRIVATE
+            "${PROJECT_SOURCE_DIR}"
+            "${PROJECT_SOURCE_DIR}/include"
+        )
         add_test(NAME "${test_target_name}" COMMAND "${test_target_name}")
     endfunction(libhttp2_test)
 
-    libhttp2_test("${PROJECT_SOURCE_DIR}/test/dynamic_table.cc")
+    libhttp2_test("${PROJECT_SOURCE_DIR}/test/byte_order_test.cc")
+    libhttp2_test("${PROJECT_SOURCE_DIR}/test/dynamic_table_test.cc")
     libhttp2_test("${PROJECT_SOURCE_DIR}/test/hpack_test.cc")
     libhttp2_test("${PROJECT_SOURCE_DIR}/test/huffman_test.cc")
     libhttp2_test("${PROJECT_SOURCE_DIR}/test/slice_test.cc")
