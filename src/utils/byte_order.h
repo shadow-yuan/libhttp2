@@ -1,11 +1,6 @@
 #pragma once
 #include <stdint.h>
 
-uint16_t get_uint16_from_big_endian(const uint8_t *v);
-uint32_t get_uint24_from_big_endian(const uint8_t *v);
-uint32_t get_uint32_from_big_endian(const uint8_t *v);
-uint64_t get_uint64_from_big_endian(const uint8_t *v);
-
 // Used to replace a series of functions such as htonl.
 // T: just for u/int16/32/64
 template <typename T>
@@ -17,3 +12,10 @@ T change_byte_order(T value) {
     }
     return *reinterpret_cast<T *>(buf);
 }
+
+uint16_t get_uint16_from_be_stream(const uint8_t *p);
+uint32_t get_uint24_from_be_stream(const uint8_t *p);
+uint32_t get_uint32_from_be_stream(const uint8_t *p);
+
+void put_uint16_in_be_stream(uint8_t *buf, uint16_t n);
+void put_uint32_in_be_stream(uint8_t *buf, uint32_t n);
