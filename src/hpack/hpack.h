@@ -1,29 +1,18 @@
 #pragma once
 #include <stdint.h>
-#include <functional>
-#include <string>
 #include <vector>
 
-#include "src/hpack/dynamic_metadata.h"
+#include "src/hpack/metadata.h"
+#include "src/utils/slice_buffer.h"
 
 namespace hpack {
-class headers {
-public:
-    // callback is used to receive the decoded header list
-    explicit headers(std::function<void(mdelem_data *)> callback);
-    ~headers();
 
-    // parse FRAME - HEADER payload
-    // return http2_errors
-    int decode_headers(const uint8_t *buf, const uint8_t *buf_end);
+// parse HEADER FRAME payload
+// return http2_errors
+int decode_headers(const uint8_t *buf, uint32_t buf_len, dynamic_table_service *dynamic_table,
+                   std::vector<mdelem_data> *decoded_headers);
 
-    std::string encode_headers(const std::vector<mdelem_data> &headers);
+// encode header list
+slice_buffer encode_headers(const std::vector<mdelem_data> &headers, dynamic_table_service *dynamic_table);
 
-private:
-    std::function<void(mdelem_data *)> _decoded_hd_list_callback;
-    dynamic_metadata_table _dynamic_table;
-
-    friend class http2_connection;
-    friend class http2_stream;
-};
 }  // namespace hpack

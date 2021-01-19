@@ -4,45 +4,70 @@
 
 namespace hpack {
 
-size_t encode_uint16_impl(uint8_t *buf, int I, uint8_t mask) {
+void uint16_encode_impl(uint8_t *buf, uint32_t I, uint8_t mask) {
     if (I < mask) {
         *buf = static_cast<uint8_t>(I);
-        return 1;
+        return;
     }
-
-    uint8_t *tmp = buf;
 
     I -= mask;
     *buf++ = mask;
-
     while (I >= 128) {
         *buf++ = static_cast<uint8_t>((I & 0x7f) | 0x80);
         I = I >> 7;
     }
     *buf++ = static_cast<uint8_t>(I);
-    return buf - tmp;
 }
 
-slice encode_uint16(int I, uint8_t mask) {
-    uint8_t buf[128] = {0};
-    size_t n = encode_uint16_impl(buf, I, mask);
-    return slice(buf, n);
+size_t uint16_encode_length(uint32_t I, uint8_t mask) {
+    if (I < mask) {
+        return 1;
+    }
+
+    I -= mask;
+    size_t count = 1;
+
+    while (I >= 128) {
+        I = I >> 7;
+        count++;
+    }
+    count++;
+    return count;
 }
 
-slice encode_mdelem_data(const mdelem_data &mdel, uint8_t key) {
-    uint8_t buf[1024] = {0};
-    buf[0] = key;
+slice encode_uint16(uint32_t I, uint8_t mask) {
+    size_t bytes = uint16_encode_length(I, mask);
+    slice s = MakeSliceByLength(bytes);
+    uint8_t *buf = const_cast<uint8_t *>(s.data());
+    uint16_encode_impl(buf, I, mask);
+    return s;
+}
 
-    size_t n = encode_uint16_impl(&buf[1], mdel.key.size(), INT_MASK(7));
-    memcpy(&buf[n + 1], mdel.key.data(), mdel.key.size());
+slice encode_mdelem_data_impl(const mdelem_data &mdel, uint8_t type) {
+    size_t key_len_size = uint16_encode_length(mdel.key.size(), INT_MASK(7));
+    size_t value_len_size = uint16_encode_length(mdel.value.size(), INT_MASK(7));
+    size_t bytes = 1 + key_len_size + value_len_size + MDELEM_SIZE(mdel);
+    slice s = MakeSliceByLength(bytes);
+    uint8_t *buf = const_cast<uint8_t *>(s.data());
 
-    uint8_t *temp = buf + 1 + n + mdel.key.size();
-    n = encode_uint16_impl(temp, mdel.value.size(), INT_MASK(7));
-    memcpy(&temp[n], mdel.value.data(), mdel.value.size());
-    temp += n + mdel.value.size();
+    // first byte (type)
+    *buf++ = type;
 
-    n = temp - buf;
-    return slice(buf, n);
+    // key length
+    uint16_encode_impl(buf, mdel.key.size(), INT_MASK(7));
+    buf += key_len_size;
+
+    // key
+    memcpy(buf, mdel.key.data(), mdel.key.size());
+    buf += mdel.key.size();
+
+    // value length
+    uint16_encode_impl(buf, mdel.value.size(), INT_MASK(7));
+    buf += value_len_size;
+
+    // value
+    memcpy(buf, mdel.value.data(), mdel.value.size());
+    return s;
 }
 
 // 6.1 Indexed Header Field Representation
@@ -53,10 +78,11 @@ slice encode_index(uint32_t index) {
         | 1 |        Index (7+)         |
         +---+---------------------------+
      */
-    uint8_t buf[128] = {0};
-    size_t n = encode_uint16_impl(buf, static_cast<int>(index), INT_MASK(7));
+
+    slice s = encode_uint16(index, INT_MASK(7));
+    uint8_t *buf = const_cast<uint8_t *>(s.data());
     buf[0] |= 0x80;
-    return slice(buf, n);
+    return s;
 }
 
 // 6.3.  Dynamic Table Size Update
@@ -67,10 +93,11 @@ slice encode_update_max_size(uint32_t max_size) {
         | 0 | 0 | 1 |   Max size (5+)   |
         +---+---------------------------+
      */
-    uint8_t buf[128] = {0};
-    size_t n = encode_uint16_impl(buf, max_size, INT_MASK(5));
+
+    slice s = encode_uint16(max_size, INT_MASK(5));
+    uint8_t *buf = const_cast<uint8_t *>(s.data());
     buf[0] |= 0x20;
-    return slice(buf, n);
+    return s;
 }
 
 // 6.2.1 Literal Header Field with Incremental Indexing
@@ -90,7 +117,7 @@ slice encode_with_incremental_indexing(const mdelem_data &mdel) {
         +-------------------------------+
      */
 
-    return encode_mdelem_data(mdel, 0x40);
+    return encode_mdelem_data_impl(mdel, 0x40);
 }
 
 // 6.2.2 Literal Header Field without Indexing
@@ -110,7 +137,7 @@ slice encode_without_indexing(const mdelem_data &mdel) {
         +-------------------------------+
      */
 
-    return encode_mdelem_data(mdel, 0x0);
+    return encode_mdelem_data_impl(mdel, 0x0);
 }
 
 // 6.2.3 Literal Header Field Never Indexed
@@ -130,6 +157,6 @@ slice encode_never_indexed(const mdelem_data &mdel) {
         +-------------------------------+
      */
 
-    return encode_mdelem_data(mdel, 0x10);
+    return encode_mdelem_data_impl(mdel, 0x10);
 }
 }  // namespace hpack

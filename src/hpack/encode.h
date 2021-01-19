@@ -5,7 +5,7 @@
 
 namespace hpack {
 
-slice encode_uint16(int I, uint8_t mask);
+slice encode_uint16(uint32_t I, uint8_t mask);
 
 // 6.1 Indexed Header Field Representation
 slice encode_index(uint32_t index);

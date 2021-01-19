@@ -7,7 +7,7 @@
 
 namespace hpack {
 
-class dynamic_metadata_table {
+class dynamic_metadata_table : public dynamic_table_service {
 public:
     explicit dynamic_metadata_table(uint32_t default_max_size);
     ~dynamic_metadata_table();
