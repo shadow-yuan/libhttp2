@@ -10,6 +10,7 @@ public:
         HALF_CLOSED_LOCAL,
         HALF_CLOSED_REMOTE,
         CLOSED,
+        ERROR,
     };
 
     http2_stream() = default;

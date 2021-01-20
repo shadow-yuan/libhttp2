@@ -47,28 +47,27 @@ enum internal_stream_event {
     HTTP2_STREAM_EVENT_RST_S = 7,  // RST_STREAM
 };
 
-const http2_stream::status event_status_table[8][7] = {
-    {http2_stream::OPEN, http2_stream::IDLE, http2_stream::HALF_CLOSED_LOCAL, http2_stream::IDLE, http2_stream::IDLE,
-     http2_stream::IDLE, http2_stream::IDLE},
-    {http2_stream::OPEN, http2_stream::HALF_CLOSED_REMOTE, http2_stream::IDLE, http2_stream::IDLE, http2_stream::IDLE,
-     http2_stream::IDLE, http2_stream::IDLE},
-    {http2_stream::RESERVED_REMOTE, http2_stream::IDLE, http2_stream::IDLE, http2_stream::IDLE, http2_stream::IDLE,
-     http2_stream::IDLE, http2_stream::IDLE},
-    {http2_stream::RESERVED_LOCAL, http2_stream::IDLE, http2_stream::IDLE, http2_stream::IDLE, http2_stream::IDLE,
-     http2_stream::IDLE, http2_stream::IDLE},
-    {http2_stream::IDLE, http2_stream::IDLE, http2_stream::IDLE, http2_stream::HALF_CLOSED_REMOTE, http2_stream::CLOSED,
-     http2_stream::IDLE, http2_stream::IDLE},
-    {http2_stream::IDLE, http2_stream::IDLE, http2_stream::IDLE, http2_stream::HALF_CLOSED_LOCAL, http2_stream::IDLE,
-     http2_stream::CLOSED, http2_stream::IDLE},
-    {http2_stream::IDLE, http2_stream::CLOSED, http2_stream::CLOSED, http2_stream::CLOSED, http2_stream::CLOSED,
-     http2_stream::CLOSED, http2_stream::IDLE},
-    {http2_stream::IDLE, http2_stream::CLOSED, http2_stream::CLOSED, http2_stream::CLOSED, http2_stream::CLOSED,
-     http2_stream::CLOSED, http2_stream::IDLE},
+const http2_stream::status event_status_table[8][8] = {
+    {http2_stream::OPEN, http2_stream::ERROR, http2_stream::HALF_CLOSED_LOCAL, http2_stream::ERROR, http2_stream::ERROR,
+     http2_stream::ERROR, http2_stream::ERROR, http2_stream::ERROR},
+    {http2_stream::OPEN, http2_stream::HALF_CLOSED_REMOTE, http2_stream::ERROR, http2_stream::ERROR,
+     http2_stream::ERROR, http2_stream::ERROR, http2_stream::ERROR, http2_stream::ERROR},
+    {http2_stream::RESERVED_REMOTE, http2_stream::ERROR, http2_stream::ERROR, http2_stream::ERROR, http2_stream::ERROR,
+     http2_stream::ERROR, http2_stream::ERROR, http2_stream::ERROR},
+    {http2_stream::RESERVED_LOCAL, http2_stream::ERROR, http2_stream::ERROR, http2_stream::ERROR, http2_stream::ERROR,
+     http2_stream::ERROR, http2_stream::ERROR, http2_stream::ERROR},
+    {http2_stream::ERROR, http2_stream::ERROR, http2_stream::ERROR, http2_stream::HALF_CLOSED_REMOTE,
+     http2_stream::CLOSED, http2_stream::ERROR, http2_stream::ERROR, http2_stream::ERROR},
+    {http2_stream::ERROR, http2_stream::ERROR, http2_stream::ERROR, http2_stream::HALF_CLOSED_LOCAL,
+     http2_stream::ERROR, http2_stream::CLOSED, http2_stream::ERROR, http2_stream::ERROR},
+    {http2_stream::ERROR, http2_stream::CLOSED, http2_stream::CLOSED, http2_stream::CLOSED, http2_stream::CLOSED,
+     http2_stream::CLOSED, http2_stream::ERROR, http2_stream::ERROR},
+    {http2_stream::ERROR, http2_stream::CLOSED, http2_stream::CLOSED, http2_stream::CLOSED, http2_stream::CLOSED,
+     http2_stream::CLOSED, http2_stream::ERROR, http2_stream::ERROR},
 };
 
 http2_stream::status get_next_status(internal_stream_event event, http2_stream::status cur_status) {
-    return event_status_table[event][cur_status] != http2_stream::IDLE ? event_status_table[event][cur_status]
-                                                                       : cur_status;
+    return event_status_table[event][cur_status];
 }
 
 void http2_stream::send_pp() {
