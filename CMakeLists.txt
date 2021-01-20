@@ -49,6 +49,7 @@ set(HPACK_SOURCES
     "${PROJECT_SOURCE_DIR}/src/hpack/hpack.cc"
     "${PROJECT_SOURCE_DIR}/src/hpack/huffman_data.cc"
     "${PROJECT_SOURCE_DIR}/src/hpack/huffman.cc"
+    "${PROJECT_SOURCE_DIR}/src/hpack/send_record.cc"
     "${PROJECT_SOURCE_DIR}/src/hpack/static_metadata.cc"
 )
 

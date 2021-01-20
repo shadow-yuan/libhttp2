@@ -18,20 +18,25 @@ static uint32_t get_slice_hash(const T &s) {
     return murmur_hash3(s.data(), s.size(), g_seed);
 }
 
-namespace hpack {
-static_metadata::static_metadata(const slice &key, const slice &value, uint32_t idx)
-    : _kv({key, value})
-    , _index(idx) {
-
-    if (!g_seed) {
+uint32_t mdelem_data_hash(const hpack::mdelem_data &oth) {
+    if (g_seed == 0) {
         auto d = std::chrono::system_clock::now().time_since_epoch();
         auto n = std::chrono::duration_cast<std::chrono::nanoseconds>(d);
         uint32_t seconds = 1 * 1000 * 1000000;
         g_seed = n.count() % seconds;
     }
-    uint32_t k_hash = get_slice_hash(key);
-    uint32_t v_hash = get_slice_hash(value);
-    _hash = METADATA_KV_HASH(k_hash, v_hash);
+    uint32_t k_hash = get_slice_hash(oth.key);
+    uint32_t v_hash = get_slice_hash(oth.value);
+    uint32_t hash = METADATA_KV_HASH(k_hash, v_hash);
+    return hash;
+}
+
+namespace hpack {
+static_metadata::static_metadata(const slice &key, const slice &value, uint32_t idx)
+    : _kv({key, value})
+    , _index(idx) {
+
+    _hash = mdelem_data_hash(_kv);
 }
 
 const mdelem_data &static_metadata::data() const {

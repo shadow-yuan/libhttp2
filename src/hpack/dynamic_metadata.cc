@@ -69,4 +69,16 @@ void dynamic_metadata_table::adjust_dynamic_table_size() {
     }
 }
 
+void dynamic_metadata_table::roll_back(uint32_t count) {
+    uint32_t n = _dynamic_table.size();
+    if (count <= n) {
+        while (count > 0) {
+            const mdelem_data &mdel = _dynamic_table.front();
+            auto element_size = MDELEM_SIZE(mdel);
+            _current_table_size -= element_size + 32;
+            _dynamic_table.pop_front();
+            count--;
+        }
+    }
+}
 }  // namespace hpack

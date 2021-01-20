@@ -1,5 +1,6 @@
 #include "src/hpack/static_metadata.h"
 #include "src/hpack/dynamic_metadata.h"
+#include "src/hpack/send_record.h"
 #include "src/utils/testutil.h"
 
 class DynamicTableTest {};
@@ -45,6 +46,32 @@ TEST(DynamicTableTest, Simple) {
     ASSERT_GE(index, 0);
     index += HPACK_STATIC_MDELEM_STANDARD_COUNT + 1;
     ASSERT_EQ(index, 68);
+
+    table.roll_back(1);
+    index = table.get_mdelem_data_index(md7);
+    ASSERT_LT(index, 0);
+}
+
+TEST(DynamicTableTest, SendRecord) {
+    hpack::mdelem_send_record send_record;
+    hpack::mdelem_data md1;
+    md1.key.assign(":authority");
+    md1.value.assign("10.158.12.140:50051");
+    send_record.push_record(md1);
+
+    hpack::mdelem_data md2;
+    md2.key.assign(":path");
+    md2.value.assign("/hellostreamingworld.MultiGreeter/sayRegularMsg");
+    send_record.push_record(md2);
+
+    hpack::mdelem_data md3;
+    md3.key.assign("te");
+    md3.value.assign("trailers");
+    send_record.push_record(md3);
+
+    ASSERT_TRUE(send_record.check_record_exists(md3));
+    send_record.roll_back(1);
+    ASSERT_TRUE(!send_record.check_record_exists(md3));
 }
 
 int main(int argc, char *argv[]) {

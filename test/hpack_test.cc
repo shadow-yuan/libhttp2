@@ -11,6 +11,8 @@
 #include "src/utils/testutil.h"
 #include "src/hpack/hpack.h"
 #include "src/hpack/dynamic_metadata.h"
+#include "src/hpack/static_metadata.h"
+#include "src/hpack/send_record.h"
 
 class HpackTest {};
 
@@ -46,6 +48,7 @@ kvobject kv5;
 kvobject kv6;
 
 hpack::dynamic_metadata_table dynamic_table(4096);
+hpack::mdelem_send_record send_record;
 
 size_t parsing_bytes_stream(const std::string &str, uint8_t **output) {
     assert(str.size() % 2 == 0);
@@ -71,8 +74,25 @@ void printf_hd_list(std::vector<hpack::mdelem_data> &decoded_hd_list) {
     decoded_hd_list.clear();
 }
 
+void printf_dynamic_table() {
+    printf("\n");
+    size_t n = dynamic_table.entry_count();
+    for (size_t i = 0; i < n; i++) {
+        hpack::mdelem_data mdel;
+        dynamic_table.get_mdelem_data(i, &mdel);
+        std::cout << i << ". " << mdel.key.to_string() << " " << mdel.value.to_string() << std::endl;
+    }
+    printf("\n");
+}
+
 bool check_response(const std::vector<hpack::mdelem_data> &headers, const char *rsp1) {
-    slice_buffer sb = hpack::encode_headers(headers, &dynamic_table);
+    hpack::encode_parameter ep;
+    ep.dynamic_table = &dynamic_table;
+    ep.number_of_dynamic_table_changes = 0;
+    ep.send_record = &send_record;
+    ep.number_of_send_record_changes = 0;
+
+    slice_buffer sb = hpack::encode_headers(headers, &ep);
     slice s = sb.merge();
 
     kvobject kv;
@@ -124,7 +144,6 @@ TEST(HpackTest, Simple) {
     headers.push_back({"content-type", "application/grpc"});
     headers.push_back({"grpc-accept-encoding", "identity,deflate,gzip"});
     headers.push_back({"accept-encoding", "identity,gzip"});
-
     ASSERT_TRUE(check_response(headers, rsp1));
     headers.clear();
 
@@ -148,6 +167,7 @@ TEST(HpackTest, Simple) {
 }
 
 int main(int argc, char **argv) {
+    init_static_metadata_context();
     kv1.second = parsing_bytes_stream(req1, &kv1.first);
     kv2.second = parsing_bytes_stream(req2, &kv2.first);
     kv3.second = parsing_bytes_stream(req3, &kv3.first);
@@ -161,5 +181,6 @@ int main(int argc, char **argv) {
     delete[] kv4.first;
     delete[] kv5.first;
     delete[] kv6.first;
+    destroy_static_metadata_context();
     return r;
 }

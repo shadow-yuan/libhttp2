@@ -116,16 +116,16 @@ int decode_headers(const uint8_t *buf, uint32_t buf_len, dynamic_table_service *
             mdelem_data mdel;
 
             if (int_value > HPACK_STATIC_MDELEM_STANDARD_COUNT) {
-                if (add_to_dynamic_table) {
-                    // 6.2.1 Literal Header Field with Incremental Indexing
-                    // Indexed Name
-                    int_value -= HPACK_STATIC_MDELEM_STANDARD_COUNT + 1;
-                    if (!dynamic_table->get_mdelem_data(int_value, &mdel)) {
-                        return HTTP2_COMPRESSION_ERROR;
-                    }
-                } else {
+                // if (add_to_dynamic_table) {
+                // 6.2.1 Literal Header Field with Incremental Indexing
+                // Indexed Name
+                int_value -= HPACK_STATIC_MDELEM_STANDARD_COUNT + 1;
+                if (!dynamic_table->get_mdelem_data(int_value, &mdel)) {
                     return HTTP2_COMPRESSION_ERROR;
                 }
+                //} else {
+                // return HTTP2_COMPRESSION_ERROR;
+                //}
             } else if (int_value != 0) {
                 const auto sm = hpack_static_headers[int_value];
                 mdel.key = sm.data().key;
@@ -157,8 +157,12 @@ int decode_headers(const uint8_t *buf, uint32_t buf_len, dynamic_table_service *
     return HTTP2_NO_ERROR;
 }
 
-slice_buffer encode_headers(const std::vector<mdelem_data> &headers, dynamic_table_service *dynamic_table) {
+slice_buffer encode_headers(const std::vector<mdelem_data> &headers, struct encode_parameter *param) {
     slice_buffer header_block_fragment;
+
+    param->number_of_dynamic_table_changes = 0;
+    param->number_of_send_record_changes = 0;
+
     for (size_t i = 0; i < headers.size(); i++) {
         const mdelem_data &mdel = headers[i];
 
@@ -171,18 +175,41 @@ slice_buffer encode_headers(const std::vector<mdelem_data> &headers, dynamic_tab
             continue;
         }
 
-        // step 2. find dynamic metadata table
-        uint32_t dynamic_index = dynamic_table->get_mdelem_data_index(mdel);
-        if (dynamic_index >= 0) {
-            dynamic_index += HPACK_STATIC_MDELEM_STANDARD_COUNT + 1;
-            s = encode_index(dynamic_index);
-            header_block_fragment.add_slice(s);
-            continue;
-        }
+        if (param->send_record->check_record_exists(mdel)) {
+            // step 2. find dynamic metadata table
+            int32_t dynamic_index = param->dynamic_table->get_mdelem_data_index(mdel);
+            if (dynamic_index >= 0) {
+                dynamic_index += HPACK_STATIC_MDELEM_STANDARD_COUNT + 1;
+                s = encode_index(dynamic_index);
+                header_block_fragment.add_slice(s);
+                continue;
+            }
 
-        // step 3. <6.2.1 Literal Header Field with Incremental Indexing>
-        s = encode_with_incremental_indexing(mdel);
-        header_block_fragment.add_slice(s);
+            // Maybe due to the dynamic table size adjustment,
+            // the corresponding entry popped up.
+
+            // step 3. <6.2.1 Literal Header Field with Incremental Indexing>
+            s = encode_with_incremental_indexing(mdel);
+            header_block_fragment.add_slice(s);
+
+            // update dynamic table
+            param->dynamic_table->push_mdelem_data(mdel);
+            param->number_of_dynamic_table_changes++;
+
+        } else {
+
+            // step 3. <6.2.1 Literal Header Field with Incremental Indexing>
+            s = encode_with_incremental_indexing(mdel);
+            header_block_fragment.add_slice(s);
+
+            // add record
+            param->number_of_send_record_changes++;
+            param->send_record->push_record(mdel);
+
+            // update dynamic table
+            param->dynamic_table->push_mdelem_data(mdel);
+            param->number_of_dynamic_table_changes++;
+        }
     }
     return header_block_fragment;
 }
