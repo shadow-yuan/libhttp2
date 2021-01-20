@@ -8,14 +8,6 @@ uint16_t get_uint16_from_be_stream(const uint8_t *p) {
     return *reinterpret_cast<uint16_t *>(buf);
 }
 
-uint32_t get_uint24_from_be_stream(const uint8_t *p) {
-    uint8_t buf[4] = {0};
-    buf[0] = p[2];
-    buf[1] = p[1];
-    buf[2] = p[0];
-    return *reinterpret_cast<uint32_t *>(buf);
-}
-
 uint32_t get_uint32_from_be_stream(const uint8_t *p) {
     uint8_t buf[4] = {0};
     buf[0] = p[3];

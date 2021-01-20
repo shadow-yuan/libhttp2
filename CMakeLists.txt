@@ -54,10 +54,10 @@ set(HPACK_SOURCES
 )
 
 set(HTTP2_SOURCES
-    "${PROJECT_SOURCE_DIR}/src/http2/connection_setting.cc"
     "${PROJECT_SOURCE_DIR}/src/http2/connection.cc"
     "${PROJECT_SOURCE_DIR}/src/http2/frame.cc"
     "${PROJECT_SOURCE_DIR}/src/http2/parser.cc"
+    "${PROJECT_SOURCE_DIR}/src/http2/settings.cc"
     "${PROJECT_SOURCE_DIR}/src/http2/stream.cc"
     "${PROJECT_SOURCE_DIR}/src/http2/transport.cc"
 )

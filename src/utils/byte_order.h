@@ -15,7 +15,6 @@ T change_byte_order(T value) {
 }
 
 uint16_t get_uint16_from_be_stream(const uint8_t *p);
-uint32_t get_uint24_from_be_stream(const uint8_t *p);
 uint32_t get_uint32_from_be_stream(const uint8_t *p);
 
 void put_uint16_in_be_stream(uint8_t *buf, uint16_t n);

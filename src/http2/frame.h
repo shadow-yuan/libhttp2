@@ -1,8 +1,9 @@
 #pragma once
 #include <stdint.h>
+#include <vector>
 #include "src/utils/slice.h"
 
-enum http2_frame_type {
+typedef enum {
     /**
      * DATA frames convey arbitrary, variable-length sequences of
      *  octets associated with a stream.  One or more DATA frames are used,
@@ -71,9 +72,9 @@ enum http2_frame_type {
      *  the END_HEADERS flag set.
      */
     HTTP2_FRAME_CONTINUATION = 0x9,
-};
+} http2_frame_type;
 
-enum http2_frame_flags {
+typedef enum {
     /**
      * When set, bit 0 indicates that this frame is the
      *  last that the endpoint will send for the identified stream.
@@ -97,85 +98,91 @@ enum http2_frame_flags {
      *   (E), Stream Dependency, and Weight fields are present;
      */
     HTTP2_FLAG_PRIORITY = 0x20,
-};
+} http2_frame_flags;
 
-struct http2_frame_head {
-    uint32_t payload_length;
+typedef struct {
+    uint32_t length;  // payload length
     uint8_t type;
-    uint8_t flag;
+    uint8_t flags;
+    uint8_t reserved;
     uint32_t stream_id;
-};
+} http2_frame_header;
 
-struct http2_frame_data {
-    http2_frame_head head;
+typedef struct {
+    http2_frame_header hdr;
     uint8_t pad_len;
     slice data;
-};
+} http2_frame_data;
 
-struct http2_frame_headers {
-    http2_frame_head head;
+// Follow the PRIORITY flag to exist
+typedef struct {
+    int32_t stream_id;
+    int32_t weight;
+    uint8_t exclusive;
+} http2_priority_spec;
+
+typedef struct {
+    http2_frame_header hdr;
     uint8_t pad_len;
-    uint32_t stream_id;
-    uint8_t weight;
+    http2_priority_spec pspec;  // with PRIORITY flag
     slice header_block_fragment;
-};
+} http2_frame_headers;
 
-struct http2_frame_priority {
-    http2_frame_head head;
-    uint32_t stream_id;
-    uint8_t weight;
-};
+typedef struct {
+    http2_frame_header hdr;
+    http2_priority_spec pspec;  // with PRIORITY flag
+} http2_frame_priority;
 
-struct http2_frame_rst_stream {
-    http2_frame_head head;
+typedef struct {
+    http2_frame_header hdr;
     uint32_t error_code;
-};
+} http2_frame_rst_stream;
 
-struct http2_settings_entry {
+typedef struct {
     uint16_t id;
     uint32_t value;
-};
+} http2_settings_entry;
 
-struct http2_frame_settings {
-    http2_frame_head head;
-    size_t count;
-    http2_settings_entry *settings;
-};
+typedef struct {
+    http2_frame_header hdr;
+    std::vector<http2_settings_entry> settings;
+} http2_frame_settings;
 
-struct http2_frame_push_promise {
-    http2_frame_head head;
+typedef struct {
+    http2_frame_header hdr;
     uint8_t pad_len;
     uint32_t promised_stream_id;
     slice header_block_fragment;
-};
+    uint8_t reserved;
+} http2_frame_push_promise;
 
-struct http2_frame_ping {
-    http2_frame_head head;
-    uint64_t data;
-};
+typedef struct {
+    http2_frame_header hdr;
+    uint8_t opaque_data[8];
+} http2_frame_ping;
 
-struct http2_frame_goaway {
-    http2_frame_head head;
-    uint32_t last_stream_id;
+typedef struct {
+    http2_frame_header hdr;
+    uint32_t last_stream_id;  // 31 bits
     uint32_t error_code;
-    slice data;
-};
+    slice debug_data;
+    uint8_t reserved;
+} http2_frame_goaway;
 
-struct http2_frame_window_update {
-    http2_frame_head head;
-    uint32_t size;
-};
+typedef struct {
+    http2_frame_header hdr;
+    uint32_t window_size_inc;  // 31 bits
+    uint8_t reserved;
+} http2_frame_window_update;
 
-struct http2_frame_continuation {
-    http2_frame_head head;
+typedef struct {
+    http2_frame_header hdr;
     slice header_block_fragment;
-};
+} http2_frame_continuation;
 
-struct http2_frame {
-    http2_frame(){};
-    ~http2_frame(){};
+typedef struct {
     union {
-        http2_frame_head head;
+        http2_frame_header hdr;
         http2_frame_data data;
         http2_frame_headers headers;
         http2_frame_priority priority;
@@ -187,11 +194,15 @@ struct http2_frame {
         http2_frame_window_update window_update;
         http2_frame_continuation continuation;
     };
-};
+} http2_frame;
 
-void http2_free_frame(http2_frame *frame);
+#define HTTP2_STREAM_ID_MASK ((1u << 31) - 1)
+#define HTTP2_FRAME_HEADER_SIZE 9
 
-uint8_t head_bit(uint8_t v);
-uint8_t head_bit(uint16_t v);
-uint8_t head_bit(uint32_t v);
-void rm_head_bit(uint32_t &v);
+void http2_frame_header_pack(uint8_t *out, const http2_frame_header *hd);
+void http2_frame_header_unpack(http2_frame_header *hd, const uint8_t *input);
+void http2_frame_header_init(http2_frame_header *hd, size_t length, uint8_t type, uint8_t flags, uint32_t stream_id);
+
+http2_frame_settings build_http2_frame_settings(int flag, const std::vector<http2_settings_entry> &settings);
+http2_frame_settings build_http2_frame_settings_ack();
+http2_frame_ping build_http2_frame_ping(uint8_t payload[8], bool ack);
