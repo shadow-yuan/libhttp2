@@ -15,7 +15,7 @@ TEST(ByteOrderTest, Change) {
 TEST(ByteOrderTest, Get) {
     uint8_t buf[] = {0x12, 0x34, 0x56, 0x78, 0x00};
     uint16_t n16 = get_uint16_from_be_stream(buf);
-    uint32_t n24 = get_uint24_from_be_stream(buf);
+    uint32_t n24 = get_uint32_from_be_stream(buf) >> 8;
     uint32_t n32 = get_uint32_from_be_stream(buf);
     ASSERT_EQ(n16, 0x1234);
     ASSERT_EQ(n24, 0x123456);

@@ -70,34 +70,65 @@ http2_stream::status get_next_status(internal_stream_event event, http2_stream::
     return event_status_table[event][cur_status];
 }
 
-void http2_stream::send_pp() {
+void http2_stream::send_push_promise() {
     _cur_status = get_next_status(HTTP2_STREAM_EVENT_PP_S, _cur_status);
 }
 
-void http2_stream::recv_pp() {
+void http2_stream::recv_push_promise() {
     _cur_status = get_next_status(HTTP2_STREAM_EVENT_PP_R, _cur_status);
 }
 
-void http2_stream::send_h() {
+void http2_stream::send_headers() {
     _cur_status = get_next_status(HTTP2_STREAM_EVENT_HEADERS_S, _cur_status);
 }
 
-void http2_stream::recv_h() {
+void http2_stream::recv_headers() {
     _cur_status = get_next_status(HTTP2_STREAM_EVENT_HEADERS_R, _cur_status);
 }
 
-void http2_stream::send_r() {
+void http2_stream::send_rst_stream() {
     _cur_status = get_next_status(HTTP2_STREAM_EVENT_RST_S, _cur_status);
 }
 
-void http2_stream::recv_r() {
+void http2_stream::recv_rst_stream() {
     _cur_status = get_next_status(HTTP2_STREAM_EVENT_RST_R, _cur_status);
 }
 
-void http2_stream::send_es() {
+void http2_stream::send_end_stream() {
     _cur_status = get_next_status(HTTP2_STREAM_EVENT_ES_S, _cur_status);
 }
 
-void http2_stream::recv_es() {
+void http2_stream::recv_end_stream() {
     _cur_status = get_next_status(HTTP2_STREAM_EVENT_ES_R, _cur_status);
+}
+
+// ---------------------------------
+http2_stream::http2_stream(uint32_t stream_id)
+    : _cur_status(IDLE) {}
+
+uint8_t http2_stream::frame_type() {
+    return _frame_type;
+}
+
+uint8_t http2_stream::frame_flags() {
+    return _frame_flags;
+}
+
+void http2_stream::frame_type(uint8_t type) {
+    _frame_type = type;
+}
+
+void http2_stream::frame_flags(uint8_t flags) {
+    _frame_flags = flags;
+}
+
+void http2_stream::push_headers(const std::vector<hpack::mdelem_data> &headers) {
+    for (size_t i = 0; i < headers.size(); i++) {
+        _headers.emplace_back(headers[i]);
+    }
+}
+
+void http2_stream::push_data(slice s) {
+    slice obj(s.data(), s.size());
+    _data_cache.add_slice(obj);
 }

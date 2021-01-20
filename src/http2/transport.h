@@ -1,16 +1,17 @@
 #pragma once
 #include <stddef.h>
 #include <stdint.h>
+#include <map>
 #include <memory>
-#include <vector>
-#include "include/http2/http2.h"
-#include "src/http2/connection.h"
+#include <mutex>
+#include <utility>
 
-class RpcCallService;
-class RpcResponse;
+#include "http2/http2.h"
+
+class http2_connection;
 class http2_transport {
 public:
-    http2_transport(http2::TcpSendService *sender);
+    explicit http2_transport(http2::TcpSendService *sender);
     ~http2_transport();
 
     void set_rpc_call_service(http2::RpcCallService *service);
@@ -28,7 +29,8 @@ private:
     bool destroy_connection(uint64_t cid);
 
 private:
-    std::vector<std::shared_ptr<http2_connection>> _connections;
-    http2::RpcCallService *_service = nullptr;
-    http2::TcpSendService *_sender = nullptr;
+    http2::TcpSendService *_tcp_sender;
+    http2::RpcCallService *_call_service;
+    std::map<uint64_t, std::shared_ptr<http2_connection>> _connections;
+    std::mutex _mutex;
 };

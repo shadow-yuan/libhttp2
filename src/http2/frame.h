@@ -180,7 +180,9 @@ typedef struct {
     slice header_block_fragment;
 } http2_frame_continuation;
 
-typedef struct {
+typedef struct http2_frame {
+    http2_frame() {}
+    ~http2_frame() {}
     union {
         http2_frame_header hdr;
         http2_frame_data data;
