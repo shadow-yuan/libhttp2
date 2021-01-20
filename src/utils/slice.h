@@ -8,9 +8,9 @@
 class slice_refcount;
 class slice {
 public:
-    enum type { STATIC, DYNAMIC };
-    slice(const void *ptr, size_t length, slice::type t = DYNAMIC);
-    slice(const char *str, slice::type t = DYNAMIC);
+    slice(const void *ptr, size_t length);
+    slice(const std::string &str);
+    slice(const char *str);
 
     slice(const slice &oth);
     slice &operator=(const slice &oth);
@@ -28,7 +28,6 @@ public:
 
     std::string to_string() const;
     bool empty() const;
-    slice::type get_type() const;
 
     void assign(const std::string &s);
     bool compare(const std::string &s) const;
@@ -38,15 +37,29 @@ public:
         return !(this->operator==(oth));
     }
 
-    int32_t reference_count();
-
 private:
+    enum { SLICE_INLINED_SIZE = 23 };
+
+    slice_refcount *_refs;
+    union slice_data {
+        struct {
+            size_t length;
+            uint8_t *bytes;
+        } refcounted;
+        struct {
+            uint8_t length;
+            uint8_t bytes[23];
+        } inlined;
+    } _data;
+
+    friend slice MakeStaticSlice(const void *ptr, size_t len);
     friend slice MakeSliceByLength(size_t len);
     friend slice operator+(slice s1, slice s2);
-    slice_refcount *_refs;
-    uint8_t *_bytes;
-    size_t _length;
 };
+
+// Static slice will not copy data, save the pointer directly.
+slice MakeStaticSlice(const void *ptr, size_t len);
+slice MakeStaticSlice(const char *ptr);
 
 slice MakeSliceByLength(size_t len);
 slice operator+(slice s1, slice s2);

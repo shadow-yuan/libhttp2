@@ -21,10 +21,13 @@ TEST(SliceTest, Simple) {
     std::string str("HelloWorld");
     s = obj.s1 + obj.s2;
     ASSERT_EQ(s.to_string(), str);
+    s.pop_front(3);
+    ASSERT_EQ(s.to_string(), std::string("loWorld"));
+    s.pop_back(3);
+    ASSERT_EQ(s.to_string(), std::string("loWo"));
 }
 
 TEST(SliceTest, Deque) {
-    slice_buffer sb;
     slice s;
     testobject obj;
     obj.s1.assign("Hello");
@@ -32,8 +35,6 @@ TEST(SliceTest, Deque) {
 
     std::deque<testobject> vs;
     vs.push_back(obj);
-    ASSERT_EQ(obj.s1.reference_count(), 2);
-    ASSERT_EQ(obj.s2.reference_count(), 2);
 }
 
 TEST(SliceTest, SliceBuffer) {
