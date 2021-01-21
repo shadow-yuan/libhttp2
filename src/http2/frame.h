@@ -1,6 +1,7 @@
 #pragma once
 #include <stdint.h>
 #include <vector>
+#include <type_traits>
 #include "src/utils/slice.h"
 
 typedef enum {
@@ -106,10 +107,10 @@ typedef struct {
     uint8_t flags;
     uint8_t reserved;
     uint32_t stream_id;
-} http2_frame_header;
+} http2_frame_hdr;
 
 typedef struct {
-    http2_frame_header hdr;
+    http2_frame_hdr hdr;
     uint8_t pad_len;
     slice data;
 } http2_frame_data;
@@ -122,19 +123,19 @@ typedef struct {
 } http2_priority_spec;
 
 typedef struct {
-    http2_frame_header hdr;
+    http2_frame_hdr hdr;
     uint8_t pad_len;
     http2_priority_spec pspec;  // with PRIORITY flag
     slice header_block_fragment;
 } http2_frame_headers;
 
 typedef struct {
-    http2_frame_header hdr;
+    http2_frame_hdr hdr;
     http2_priority_spec pspec;  // with PRIORITY flag
 } http2_frame_priority;
 
 typedef struct {
-    http2_frame_header hdr;
+    http2_frame_hdr hdr;
     uint32_t error_code;
 } http2_frame_rst_stream;
 
@@ -144,12 +145,12 @@ typedef struct {
 } http2_settings_entry;
 
 typedef struct {
-    http2_frame_header hdr;
+    http2_frame_hdr hdr;
     std::vector<http2_settings_entry> settings;
 } http2_frame_settings;
 
 typedef struct {
-    http2_frame_header hdr;
+    http2_frame_hdr hdr;
     uint8_t pad_len;
     uint32_t promised_stream_id;
     slice header_block_fragment;
@@ -157,12 +158,12 @@ typedef struct {
 } http2_frame_push_promise;
 
 typedef struct {
-    http2_frame_header hdr;
+    http2_frame_hdr hdr;
     uint8_t opaque_data[8];
 } http2_frame_ping;
 
 typedef struct {
-    http2_frame_header hdr;
+    http2_frame_hdr hdr;
     uint32_t last_stream_id;  // 31 bits
     uint32_t error_code;
     slice debug_data;
@@ -170,40 +171,38 @@ typedef struct {
 } http2_frame_goaway;
 
 typedef struct {
-    http2_frame_header hdr;
+    http2_frame_hdr hdr;
     uint32_t window_size_inc;  // 31 bits
     uint8_t reserved;
 } http2_frame_window_update;
 
 typedef struct {
-    http2_frame_header hdr;
+    http2_frame_hdr hdr;
     slice header_block_fragment;
 } http2_frame_continuation;
 
 typedef struct http2_frame {
-    http2_frame() {}
-    ~http2_frame() {}
     union {
-        http2_frame_header hdr;
-        http2_frame_data data;
-        http2_frame_headers headers;
-        http2_frame_priority priority;
-        http2_frame_rst_stream rst_stream;
-        http2_frame_settings settings;
-        http2_frame_push_promise promise;
-        http2_frame_ping ping;
-        http2_frame_goaway goaway;
-        http2_frame_window_update window_update;
-        http2_frame_continuation continuation;
+        std::aligned_storage<sizeof(http2_frame_hdr), alignof(http2_frame_hdr)>::type hdr;
+        std::aligned_storage<sizeof(http2_frame_data), alignof(http2_frame_data)>::type data;
+        std::aligned_storage<sizeof(http2_frame_headers), alignof(http2_frame_headers)>::type headers;
+        std::aligned_storage<sizeof(http2_frame_priority), alignof(http2_frame_priority)>::type priority;
+        std::aligned_storage<sizeof(http2_frame_rst_stream), alignof(http2_frame_rst_stream)>::type rst_stream;
+        std::aligned_storage<sizeof(http2_frame_settings), alignof(http2_frame_settings)>::type settings;
+        std::aligned_storage<sizeof(http2_frame_push_promise), alignof(http2_frame_push_promise)>::type promise;
+        std::aligned_storage<sizeof(http2_frame_ping), alignof(http2_frame_ping)>::type ping;
+        std::aligned_storage<sizeof(http2_frame_goaway), alignof(http2_frame_goaway)>::type goaway;
+        std::aligned_storage<sizeof(http2_frame_window_update), alignof(http2_frame_window_update)>::type window_update;
+        std::aligned_storage<sizeof(http2_frame_continuation), alignof(http2_frame_continuation)>::type continuation;
     };
 } http2_frame;
 
-#define HTTP2_STREAM_ID_MASK ((1u << 31) - 1)
+#define HTTP2_STREAM_ID_MASK 0x7fffffff
 #define HTTP2_FRAME_HEADER_SIZE 9
 
-void http2_frame_header_pack(uint8_t *out, const http2_frame_header *hd);
-void http2_frame_header_unpack(http2_frame_header *hd, const uint8_t *input);
-void http2_frame_header_init(http2_frame_header *hd, size_t length, uint8_t type, uint8_t flags, uint32_t stream_id);
+void http2_frame_header_pack(uint8_t *out, const http2_frame_hdr *hd);
+void http2_frame_header_unpack(http2_frame_hdr *hd, const uint8_t *input);
+void http2_frame_header_init(http2_frame_hdr *hd, size_t length, uint8_t type, uint8_t flags, uint32_t stream_id);
 
 http2_frame_settings build_http2_frame_settings(int flag, const std::vector<http2_settings_entry> &settings);
 http2_frame_settings build_http2_frame_settings_ack();

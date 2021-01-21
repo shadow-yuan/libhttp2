@@ -2,24 +2,17 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#include "src/http2/errors.h"
 #include "src/http2/frame.h"
 
-typedef struct {
-    // input params
-    const uint8_t *input;
-    size_t input_size;
-    bool first_frame;  // stream first frame
-    int prev_type;
-    int prev_flags;
+int parse_http2_frame_data(http2_frame_hdr *hdr, const uint8_t *input, http2_frame_data *output);
+int parse_http2_frame_headers(http2_frame_hdr *hdr, const uint8_t *input, http2_frame_headers *output);
+int parse_http2_frame_priority(http2_frame_hdr *hdr, const uint8_t *input, http2_frame_priority *output);
+int parse_http2_frame_rst_stream(http2_frame_hdr *hdr, const uint8_t *input, http2_frame_rst_stream *output);
+int parse_http2_frame_settings(http2_frame_hdr *hdr, const uint8_t *input, http2_frame_settings *output);
+int parse_http2_frame_push_promise(http2_frame_hdr *hdr, const uint8_t *input, http2_frame_push_promise *output);
+int parse_http2_frame_ping(http2_frame_hdr *hdr, const uint8_t *input, http2_frame_ping *output);
+int parse_http2_frame_goaway(http2_frame_hdr *hdr, const uint8_t *input, http2_frame_goaway *output);
+int parse_http2_frame_window_update(http2_frame_hdr *hdr, const uint8_t *input, http2_frame_window_update *output);
+int parse_http2_frame_continuation(http2_frame_hdr *hdr, const uint8_t *input, http2_frame_continuation *output);
 
-    // output result
-    http2_frame *frame;
-    uint32_t error_code;
-} frame_parser;
-
-int http2_package_parse(frame_parser *parser);
-
-int connection_preface_length();
-bool verify_connection_preface(const void *buf, size_t len);
-int check_http2_package_length(const void *data, size_t len);
+int parse_http2_package(http2_frame *frame, const uint8_t *input, http2_frame_hdr *hdr);

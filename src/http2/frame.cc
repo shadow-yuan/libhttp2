@@ -1,7 +1,7 @@
 #include "src/http2/frame.h"
 #include "src/utils/byte_order.h"
 
-void http2_frame_header_pack(uint8_t *buf, const http2_frame_header *hd) {
+void http2_frame_header_pack(uint8_t *buf, const http2_frame_hdr *hd) {
     put_uint32_in_be_stream(&buf[0], (uint32_t)(hd->length << 8));
     buf[3] = hd->type;
     buf[4] = hd->flags;
@@ -9,7 +9,7 @@ void http2_frame_header_pack(uint8_t *buf, const http2_frame_header *hd) {
     // ignore hd->reserved for now
 }
 
-void http2_frame_header_unpack(http2_frame_header *hd, const uint8_t *buf) {
+void http2_frame_header_unpack(http2_frame_hdr *hd, const uint8_t *buf) {
     hd->length = get_uint32_from_be_stream(&buf[0]) >> 8;
     hd->type = buf[3];
     hd->flags = buf[4];
@@ -17,7 +17,7 @@ void http2_frame_header_unpack(http2_frame_header *hd, const uint8_t *buf) {
     hd->reserved = 0;
 }
 
-void http2_frame_header_init(http2_frame_header *hd, size_t length, uint8_t type, uint8_t flags, uint32_t stream_id) {
+void http2_frame_header_init(http2_frame_hdr *hd, size_t length, uint8_t type, uint8_t flags, uint32_t stream_id) {
     hd->length = length;
     hd->type = type;
     hd->flags = flags;
