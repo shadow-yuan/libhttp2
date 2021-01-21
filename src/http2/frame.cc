@@ -49,3 +49,12 @@ http2_frame_ping build_http2_frame_ping(uint8_t payload[8], bool ack) {
     memcpy(frame.opaque_data, payload, 8);
     return frame;
 }
+
+http2_frame_goaway build_http2_frame_goaway(uint32_t error_code, uint32_t last_stream_id) {
+    http2_frame_goaway frame;
+    http2_frame_header_init(&frame.hdr, 8, HTTP2_FRAME_GOAWAY, 0, 0);
+    frame.error_code = error_code;
+    frame.last_stream_id = last_stream_id;
+    frame.reserved = 0;
+    return frame;
+}

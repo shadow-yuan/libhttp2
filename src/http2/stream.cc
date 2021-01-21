@@ -1,4 +1,3 @@
-#include "src/http2/stream.h"
 
 /* http2 status migrational table
                                 +--------+
@@ -36,6 +35,10 @@
           ES: END_STREAM flag
           R:  RST_STREAM frame
 */
+
+#include "src/http2/stream.h"
+#include "src/http2/frame.h"
+
 enum internal_stream_event {
     HTTP2_STREAM_EVENT_HEADERS_R = 0,
     HTTP2_STREAM_EVENT_HEADERS_S = 1,
@@ -120,6 +123,14 @@ void http2_stream::frame_type(uint8_t type) {
 
 void http2_stream::frame_flags(uint8_t flags) {
     _frame_flags = flags;
+
+    if (flags & HTTP2_FLAG_END_HEADERS) {
+        _finish_header = true;
+    }
+
+    if (flags & HTTP2_FLAG_END_STREAM) {
+        recv_end_stream();
+    }
 }
 
 void http2_stream::push_headers(const std::vector<hpack::mdelem_data> &headers) {

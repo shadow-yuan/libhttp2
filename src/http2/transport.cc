@@ -4,21 +4,7 @@
 #include "src/http2/frame.h"
 #include "src/http2/parser.h"
 #include "src/http2/connection.h"
-
-static const uint8_t connection_preface[24] = {0x50, 0x52, 0x49, 0x20, 0x2a, 0x20, 0x48, 0x54, 0x54, 0x50, 0x2f, 0x32,
-                                               0x2e, 0x30, 0x0d, 0x0a, 0x0d, 0x0a, 0x53, 0x4d, 0x0d, 0x0a, 0x0d, 0x0a};
-
-inline int connection_preface_length() {
-    return static_cast<int>(sizeof(connection_preface));
-}
-
-bool verify_connection_preface(const void *buf, size_t len) {
-    size_t preface_size = sizeof(connection_preface);
-    if (len < preface_size) {
-        return false;
-    }
-    return memcmp(buf, connection_preface, preface_size) == 0;
-}
+#include "src/http2/settings.h"
 
 http2_transport::http2_transport(http2::TcpSendService *sender)
     : _tcp_sender(sender)
@@ -39,51 +25,48 @@ size_t http2_transport::get_max_header_size() {
 }
 
 int http2_transport::check_package_length(uint64_t cid, const void *data, size_t len) {
-    auto it = _connections.find(cid);
-    if (it == _connections.end()) {
+    if (len < HTTP2_FRAME_HEADER_SIZE) return 0;
+
+    auto conn = find_connection(cid);
+    if (!conn) return -1;
+
+    if (conn->need_verify_preface() && memcmp(data, http2_connection::PREFACE, 9) == 0) {
+        return http2_connection::PREFACE_SIZE;
+    }
+
+    http2_frame_hdr hdr;
+    http2_frame_header_unpack(&hdr, static_cast<const uint8_t *>(data));
+    if (hdr.length > 0 && hdr.length > conn->local_max_frame_size()) {
+        conn->send_goaway(HTTP2_FRAME_SIZE_ERROR);
         return -1;
     }
-
-    if (!it->second->is_handshake()) {
-        return connection_preface_length();
-    }
-
-    int r = check_http2_package_length(data, len);
-    if (r < 0) {
-        // send GOAWAY, error_code FRAME_SIZE_ERROR;
-        it->second->send_goaway(HTTP2_FRAME_SIZE_ERROR);
-    }
-    return r;
+    return hdr.length + HTTP2_FRAME_HEADER_SIZE;
 }
 
-void http2_transport::connection_enter(uint64_t cid, bool client) {
-    if (client) {  // send preface
-        _tcp_sender->SendTcpData(cid, connection_preface, sizeof(connection_preface));
-    }
-    _connections[cid] = std::make_shared<http2_connection>(cid, client);
+void http2_transport::connection_enter(uint64_t cid, bool client_side) {
+    _connections[cid] = std::make_shared<http2_connection>(_tcp_sender, cid, client_side);
 }
 
 void http2_transport::received_data(uint16_t cid, const void *buf, size_t len) {
-    auto it = _connections.find(cid);
-    if (it == _connections.end()) {
-        return;
-    }
+    auto conn = find_connection(cid);
+    if (!conn) return;
 
     const uint8_t *package = reinterpret_cast<const uint8_t *>(buf);
     size_t package_length = len;
 
-    if (!it->second->is_handshake()) {
-        if (!verify_connection_preface(buf, len)) {
-            it->second->send_goaway(HTTP2_PROTOCOL_ERROR);
+    if (conn->need_verify_preface()) {
+        if (package_length != http2_connection::PREFACE_SIZE ||
+            memcmp(package, http2_connection::PREFACE, http2_connection::PREFACE_SIZE) != 0) {
+            conn->send_goaway(HTTP2_PROTOCOL_ERROR);
             return;
         }
-        it->second->handshake_done();
-        package_length -= connection_preface_length();
-        package += connection_preface_length();
+        conn->verify_preface_done();
+        package_length -= http2_connection::PREFACE_SIZE;
+        package += http2_connection::PREFACE_SIZE;
     }
 
     if (package_length > 0) {
-        it->second->package_process(package, package_length);
+        conn->package_process(package, package_length);
     }
 }
 
@@ -92,6 +75,7 @@ void http2_transport::connection_leave(uint64_t cid) {
 }
 
 std::shared_ptr<http2_connection> http2_transport::find_connection(uint64_t cid) {
+    std::unique_lock<std::mutex> lck(_mutex);
     auto it = _connections.find(cid);
     if (it == _connections.end()) {
         return nullptr;

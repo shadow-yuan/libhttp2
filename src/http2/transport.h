@@ -18,17 +18,13 @@ public:
     void async_send_reply(std::shared_ptr<http2::RpcResponse> rsp);
     size_t get_max_header_size();
     int check_package_length(uint64_t cid, const void *data, size_t len);
-    void connection_enter(uint64_t cid, bool client = false);
+    void connection_enter(uint64_t cid, bool client_side);
     void received_data(uint16_t cid, const void *buf, size_t len);
     void connection_leave(uint64_t cid);
 
 private:
-    bool is_connection_exist(uint64_t cid);
-    std::shared_ptr<http2_connection> http2_transport::find_connection(uint64_t cid);
-    std::shared_ptr<http2_connection> create_connection(uint64_t cid, bool client);
-    bool destroy_connection(uint64_t cid);
+    std::shared_ptr<http2_connection> find_connection(uint64_t cid);
 
-private:
     http2::TcpSendService *_tcp_sender;
     http2::RpcCallService *_call_service;
     std::map<uint64_t, std::shared_ptr<http2_connection>> _connections;

@@ -207,3 +207,4 @@ void http2_frame_header_init(http2_frame_hdr *hd, size_t length, uint8_t type, u
 http2_frame_settings build_http2_frame_settings(int flag, const std::vector<http2_settings_entry> &settings);
 http2_frame_settings build_http2_frame_settings_ack();
 http2_frame_ping build_http2_frame_ping(uint8_t payload[8], bool ack);
+http2_frame_goaway build_http2_frame_goaway(uint32_t error_code, uint32_t last_stream_id);
