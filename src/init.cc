@@ -1,6 +1,6 @@
 #include "src/init.h"
 #include "src/hpack/static_metadata.h"
-
+#include "src/utils/log.h"
 #include "http2/http2.h"
 
 namespace http2 {
@@ -43,11 +43,12 @@ static LibraryInitializer global_initializer;
 }  // namespace http2
 
 void LibHttp2Initialize() {
-    // TODO(SHADOW):
     init_static_metadata_context();
+#ifndef NDEBUG
+    global_enable_log_output(true);
+#endif
 }
 
 void LibHttp2Cleanup() {
-    // TODO(SHADOW):
     destroy_static_metadata_context();
 }

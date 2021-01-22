@@ -8,6 +8,8 @@
 #include "src/http2/flow_control.h"
 #include "src/utils/log.h"
 #include "src/http2/pack.h"
+#include "src/http2/response.h"
+#include "src/http2/message.h"
 
 http2_connection::http2_connection(http2::TcpSendService *sender, uint64_t cid, bool client_side)
     : _dynamic_table(g_http2_settings_parameters[HTTP2_SETTINGS_HEADER_TABLE_SIZE].default_value) {
@@ -81,8 +83,11 @@ void http2_connection::send_goaway(uint32_t error_code, uint32_t last_stream_id)
     send_tcp_data(s);
 }
 
-void http2_connection::async_send_reply(std::shared_ptr<http2::RpcResponse> rsp) {
-    // TODO(SHADOW):
+void http2_connection::async_send_response(std::shared_ptr<http2_response> rsp) {
+    if (rsp->_stream->try_send()) {
+        // TODO(SHADOW)
+        // HEADERS, WINDOW_UPDATE, DATA
+    }
 }
 
 uint32_t http2_connection::local_max_frame_size() {

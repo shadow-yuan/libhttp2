@@ -1,7 +1,9 @@
 #pragma once
 #include <stddef.h>
 #include <stdint.h>
+#include <map>
 #include <memory>
+#include <string>
 
 namespace http2 {
 class InitService {
@@ -11,7 +13,7 @@ public:
     virtual void shutdown() = 0;
 };
 
-/* Call this interface to send tcp data */
+/* Implemented externally, libhttp2 internal call this interface to send tcp data */
 class TcpSendService {
 public:
     virtual ~TcpSendService() {}
@@ -24,49 +26,51 @@ public:
 };
 
 /*
- * Rpc request
- * Example:
- * Path: rpc service, such as '/helloworld.Greeter/SayHello'
- * Method: http method, such as POST or GET
- * Remote: Remote service address, such as 'localhost:50051'
- * Payload: the byte stream after protobuf message serialization
+ * Message
+ * @Metadata example:
+ * :path: /helloworld.Greeter/SayHello
+ * :scheme: http
+ * :method: POST
+
+ * @Message: the byte stream after protobuf message serialization
  */
-class RpcRequest {
+class Message {
 public:
-    virtual ~RpcRequest() {}
-    virtual const uint8_t *Path() = 0;
-    virtual const uint8_t *Method() = 0;
-    virtual const uint8_t *Remote() = 0;
-    virtual const uint8_t *Payload() = 0;
-    virtual size_t PayloadLength() = 0;
+    virtual ~Message() {}
+    virtual const uint8_t *Data() = 0;
+    virtual size_t DataLength() = 0;
+    virtual const std::multimap<std::string, std::string> &Metadata() = 0;
+    virtual uint64_t ConnectionId() = 0;
 };
 
-class RpcResponse {
+class Response {
 public:
-    virtual ~RpcResponse() {}
-    virtual void SetStatus(int status = 200) = 0;
-    virtual void AttachMsg(const void *buff, size_t len) = 0;
+    virtual ~Response() {}
+    virtual void SetStatus(int status) = 0;  // http status, eg. 200 means ok
+    virtual void AppendData(const void *buff, size_t len) = 0;
+    virtual void AddMetadata(const std::string &key, const std::string &value) = 0;
+    virtual uint64_t ConnectionId() = 0;
 };
 
-class RpcCallService {
+class DataService {
 public:
-    virtual ~RpcCallService() {}
+    virtual ~DataService() {}
 
     /*
      * If you want an asynchronous response, please set async to true, and
-     * call the AsyncReply function of the Transport class at the right time.
+     * call the AsyncSendResponse function of the Transport class at the right time.
      */
-    virtual int OnCall(std::shared_ptr<RpcRequest> request, std::shared_ptr<RpcResponse> response, bool &async) = 0;
+    virtual int OnMessage(std::shared_ptr<Message> msg, std::shared_ptr<Response> response, bool &async) = 0;
 };
 
 class Transport {
 public:
     virtual ~Transport() {}
 
-    virtual void SetRpcCallService(RpcCallService *service) = 0;
+    virtual void SetDataNotificationService(DataService *service) = 0;
 
     // Send response message asynchronously.
-    virtual void AsyncReply(std::shared_ptr<RpcResponse> rsp) = 0;
+    virtual void AsyncSendResponse(std::shared_ptr<Response> rsp) = 0;
 
     // Call this function to get the maximum header size of the http2 package.
     virtual size_t GetHttp2PackageMaxHeader() = 0;
@@ -94,5 +98,5 @@ public:
 
 Transport *CreateTransport(TcpSendService *sender);
 void DestroyTransport(Transport *transport);
-
+void SetLogOutputEnable(bool enable);
 }  // namespace http2

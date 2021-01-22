@@ -9,6 +9,7 @@
 #include "src/hpack/dynamic_metadata.h"
 #include "src/utils/slice_buffer.h"
 
+class http2_response;
 class http2_stream;
 class http2_connection {
 public:
@@ -31,7 +32,7 @@ public:
 
     void send_goaway(uint32_t error_code, uint32_t last_stream_id = 0);
     int package_process(const uint8_t *data, uint32_t len);
-    void async_send_reply(std::shared_ptr<http2::RpcResponse> rsp);
+    void async_send_response(std::shared_ptr<http2_response> rsp);
 
     uint32_t local_max_frame_size();
 

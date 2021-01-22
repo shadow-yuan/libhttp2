@@ -1,5 +1,6 @@
 #include "http2/http2.h"
 #include "src/http2/transport.h"
+#include "src/utils/log.h"
 
 class http2_transport;
 namespace http2 {
@@ -8,10 +9,10 @@ public:
     explicit TransportImpl(TcpSendService *sender);
     ~TransportImpl();
 
-    void SetRpcCallService(RpcCallService *service) override;
+    void SetDataNotificationService(DataService *service) override;
 
     // Send response message asynchronously.
-    void AsyncReply(std::shared_ptr<RpcResponse> rsp) override;
+    void AsyncSendResponse(std::shared_ptr<Response> rsp) override;
 
     // Call this function to get the maximum header size of the http2 package.
     size_t GetHttp2PackageMaxHeader() override;
@@ -45,13 +46,13 @@ TransportImpl::TransportImpl(TcpSendService *sender)
 
 TransportImpl::~TransportImpl() {}
 
-void TransportImpl::SetRpcCallService(RpcCallService *service) {
-    _impl->set_rpc_call_service(service);
+void TransportImpl::SetDataNotificationService(DataService *service) {
+    _impl->set_data_notification_service(service);
 }
 
 // Send response message asynchronously.
-void TransportImpl::AsyncReply(std::shared_ptr<RpcResponse> rsp) {
-    _impl->async_send_reply(rsp);
+void TransportImpl::AsyncSendResponse(std::shared_ptr<Response> rsp) {
+    _impl->async_send_response(rsp);
 }
 
 // Call this function to get the maximum header size of the http2 package.
@@ -94,5 +95,9 @@ Transport *CreateTransport(TcpSendService *sender) {
 
 void DestroyTransport(Transport *transport) {
     delete transport;
+}
+
+void SetLogOutputEnable(bool enable) {
+    global_enable_log_output(enable);
 }
 }  // namespace http2
