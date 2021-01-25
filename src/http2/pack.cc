@@ -193,60 +193,61 @@ slice pack_http2_frame_continuation(http2_frame_continuation *frame) {
 }
 
 static slice_buffer on_pack_frame_data(http2_frame *frame, uint32_t max_frame_size) {
-    return pack_http2_frame_data(new (&frame->data)(http2_frame_data), max_frame_size);
+    return pack_http2_frame_data(reinterpret_cast<http2_frame_data *>(&frame->data), max_frame_size);
 }
 
 static slice_buffer on_pack_frame_headers(http2_frame *frame, uint32_t) {
     slice_buffer buffer;
-    buffer.add_slice(pack_http2_frame_headers(new (&frame->headers)(http2_frame_headers)));
+    buffer.add_slice(pack_http2_frame_headers(reinterpret_cast<http2_frame_headers *>(&frame->headers)));
     return buffer;
 }
 
 static slice_buffer on_pack_frame_priority(http2_frame *frame, uint32_t) {
     slice_buffer buffer;
-    buffer.add_slice(pack_http2_frame_priority(new (&frame->priority)(http2_frame_priority)));
+    buffer.add_slice(pack_http2_frame_priority(reinterpret_cast<http2_frame_priority *>(&frame->priority)));
     return buffer;
 }
 
 static slice_buffer on_pack_frame_rst_stream(http2_frame *frame, uint32_t) {
     slice_buffer buffer;
-    buffer.add_slice(pack_http2_frame_rst_stream(new (&frame->rst_stream)(http2_frame_rst_stream)));
+    buffer.add_slice(pack_http2_frame_rst_stream(reinterpret_cast<http2_frame_rst_stream *>(&frame->rst_stream)));
     return buffer;
 }
 
 static slice_buffer on_pack_frame_settings(http2_frame *frame, uint32_t) {
     slice_buffer buffer;
-    buffer.add_slice(pack_http2_frame_settings(new (&frame->settings)(http2_frame_settings)));
+    buffer.add_slice(pack_http2_frame_settings(reinterpret_cast<http2_frame_settings *>(&frame->settings)));
     return buffer;
 }
 
 static slice_buffer on_pack_frame_push_promise(http2_frame *frame, uint32_t) {
     slice_buffer buffer;
-    buffer.add_slice(pack_http2_frame_push_promise(new (&frame->promise)(http2_frame_push_promise)));
+    buffer.add_slice(pack_http2_frame_push_promise(reinterpret_cast<http2_frame_push_promise *>(&frame->promise)));
     return buffer;
 }
 
 static slice_buffer on_pack_frame_ping(http2_frame *frame, uint32_t max_frame_size) {
     slice_buffer buffer;
-    buffer.add_slice(pack_http2_frame_ping(new (&frame->ping)(http2_frame_ping)));
+    buffer.add_slice(pack_http2_frame_ping(reinterpret_cast<http2_frame_ping *>(&frame->ping)));
     return buffer;
 }
 
 static slice_buffer on_pack_frame_goaway(http2_frame *frame, uint32_t) {
     slice_buffer buffer;
-    buffer.add_slice(pack_http2_frame_goaway(new (&frame->goaway)(http2_frame_goaway)));
+    buffer.add_slice(pack_http2_frame_goaway(reinterpret_cast<http2_frame_goaway *>(&frame->goaway)));
     return buffer;
 }
 
 static slice_buffer on_pack_frame_window_update(http2_frame *frame, uint32_t) {
     slice_buffer buffer;
-    buffer.add_slice(pack_http2_frame_window_update(new (&frame->window_update)(http2_frame_window_update)));
+    buffer.add_slice(
+        pack_http2_frame_window_update(reinterpret_cast<http2_frame_window_update *>(&frame->window_update)));
     return buffer;
 }
 
 static slice_buffer on_pack_frame_continuation(http2_frame *frame, uint32_t) {
     slice_buffer buffer;
-    buffer.add_slice(pack_http2_frame_continuation(new (&frame->continuation)(http2_frame_continuation)));
+    buffer.add_slice(pack_http2_frame_continuation(reinterpret_cast<http2_frame_continuation *>(&frame->continuation)));
     return buffer;
 }
 
@@ -256,6 +257,6 @@ pack_func pack_funcs[] = {on_pack_frame_data,        on_pack_frame_headers,  on_
                           on_pack_frame_ping,        on_pack_frame_goaway,   on_pack_frame_window_update,
                           on_pack_frame_continuation};
 slice_buffer pack_http2_frame(http2_frame *frame, uint32_t max_frame_size) {
-    http2_frame_hdr *hdr = new (&frame->hdr)(http2_frame_hdr);
+    http2_frame_hdr *hdr = reinterpret_cast<http2_frame_hdr *>(&frame->hdr);
     return pack_funcs[hdr->type](frame, max_frame_size);
 }

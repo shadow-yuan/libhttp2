@@ -100,6 +100,7 @@ if (LIBHTTP2_BUILD_TESTS)
             "${PROJECT_SOURCE_DIR}/src/utils/testutil.cc"
             "${PROJECT_SOURCE_DIR}/src/utils/testutil.h"
             "${PROJECT_SOURCE_DIR}/src/http2/parser.cc"
+            "${PROJECT_SOURCE_DIR}/src/http2/pack.cc"
             "${PROJECT_SOURCE_DIR}/src/http2/frame.cc"
             "${test_file}"
         )
@@ -119,5 +120,6 @@ if (LIBHTTP2_BUILD_TESTS)
     libhttp2_test("${PROJECT_SOURCE_DIR}/test/slice_test.cc")
     libhttp2_test("${PROJECT_SOURCE_DIR}/test/static_table_test.cc")
     libhttp2_test("${PROJECT_SOURCE_DIR}/test/parse_test.cc")
+    libhttp2_test("${PROJECT_SOURCE_DIR}/test/pack_test.cc")
 
 endif(LIBHTTP2_BUILD_TESTS)
