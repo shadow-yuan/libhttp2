@@ -9,8 +9,8 @@ static constexpr const uint32_t kMaxWindowUpdateSize = 0x7fffffff;
 #define MAX(a, b) ((a) > (b) ? (a) : (b))
 #define CLAMP(a, min, max) ((a) < (min) ? (min) : (a) > (max) ? (max) : (a))
 
-ConnectionFlowControl::ConnectionFlowControl(uint32_t sent_init_window) {
-    sent_init_window_ = sent_init_window;
+ConnectionFlowControl::ConnectionFlowControl(uint64_t connection_id) {
+    connection_id_ = connection_id;
 
     remote_window_ = kDefaultWindow;
     target_initial_window_size_ = kDefaultWindow;
@@ -22,7 +22,7 @@ ConnectionFlowControl::ConnectionFlowControl(uint32_t sent_init_window) {
 
 ConnectionFlowControl::~ConnectionFlowControl() {}
 
-void ConnectionFlowControl::InitializeWindowSize() {
+int64_t ConnectionFlowControl::Initialize() {
     const double target = 4194304;  // pow(2, 22);
 
     // Though initial window 'could' drop to 0, we keep the floor at 128
@@ -34,6 +34,8 @@ void ConnectionFlowControl::InitializeWindowSize() {
     // we target the max of BDP or bandwidth in microseconds.
     max_frame_size_ = static_cast<int32_t> CLAMP(
         MAX((int32_t)CLAMP(bw_dbl, 0, INT_MAX) / 1000, target_initial_window_size_), 16384, 16777215);
+
+    return target_initial_window_size_;
 }
 
 int64_t ConnectionFlowControl::TargetWindow() {
@@ -99,8 +101,12 @@ int32_t ConnectionFlowControl::MaxFrameSize() const {
     return max_frame_size_;
 }
 
-uint32_t ConnectionFlowControl::SentInitWindow() const {
-    return sent_init_window_;
+uint64_t ConnectionFlowControl::ConnectionId() const {
+    return connection_id_;
+}
+
+uint32_t ConnectionFlowControl::InitialWindowSize() const {
+    return static_cast<uint32_t>(target_initial_window_size_);
 }
 // ---------------------------------------------------
 
@@ -118,7 +124,7 @@ StreamFlowControl::~StreamFlowControl() {
 }
 
 void StreamFlowControl::IncomingByteStreamUpdate(size_t max_size_hint, size_t have_already) {
-    uint32_t sent_init_window = tfc_->SentInitWindow();  // HTTP2_SETTINGS_INITIAL_WINDOW_SIZE
+    uint32_t sent_init_window = tfc_->InitialWindowSize();  // HTTP2_SETTINGS_INITIAL_WINDOW_SIZE
     uint32_t max_recv_bytes;
 
     if (max_size_hint >= kMaxWindowUpdateSize - sent_init_window) {

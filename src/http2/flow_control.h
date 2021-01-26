@@ -4,11 +4,11 @@
 
 class ConnectionFlowControl final {
 public:
-    explicit ConnectionFlowControl(uint32_t sent_init_window);
+    explicit ConnectionFlowControl(uint64_t connection_id);
     ~ConnectionFlowControl();
 
     // Connection flow control initialization window size
-    void InitializeWindowSize();
+    int64_t Initialize();
 
     // Returns the size of the WINDOW_UPDATE frame to be created
     uint32_t FlushWindowUpdates();
@@ -20,6 +20,8 @@ public:
     void RecvUpdate(uint32_t size);
 
     int32_t MaxFrameSize() const;
+    uint64_t ConnectionId() const;
+    uint32_t InitialWindowSize() const;
 
 private:
     uint32_t MaybeSendUpdate(bool writing_anyway);
@@ -33,10 +35,8 @@ private:
     bool ValidateRecvData(int64_t incoming_frame_size);
     void CommitRecvData(int64_t incoming_frame_size);
 
-    uint32_t SentInitWindow() const;
-
 private:
-    uint32_t sent_init_window_;
+    uint64_t connection_id_;
     int64_t remote_window_;
     int64_t target_initial_window_size_;
     int64_t announced_window_;

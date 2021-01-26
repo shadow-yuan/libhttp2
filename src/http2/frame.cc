@@ -25,14 +25,14 @@ void http2_frame_header_init(http2_frame_hdr *hd, size_t length, uint8_t type, u
     hd->reserved = 0;
 }
 
-http2_frame_settings build_http2_frame_settings(int flags, const std::vector<http2_settings_entry> &settings) {
+http2_frame_settings build_http2_frame_settings(int flags, std::vector<http2_settings_entry> &settings) {
     http2_frame_settings frame;
     size_t length = 0;
     if (!settings.empty()) {
         length = 6 * settings.size();
     }
     http2_frame_header_init(&frame.hdr, length, HTTP2_FRAME_SETTINGS, flags, 0);
-    frame.settings = settings;
+    frame.settings = std::move(settings);
     return frame;
 }
 
@@ -56,5 +56,13 @@ http2_frame_goaway build_http2_frame_goaway(uint32_t error_code, uint32_t last_s
     frame.error_code = error_code;
     frame.last_stream_id = last_stream_id;
     frame.reserved = 0;
+    return frame;
+}
+
+http2_frame_window_update build_http2_frame_window_update(uint32_t stream_id, uint32_t window_size_inc) {
+    http2_frame_window_update frame;
+    http2_frame_header_init(&frame.hdr, 4, HTTP2_FRAME_WINDOW_UPDATE, 0, stream_id);
+    frame.reserved = 0;
+    frame.window_size_inc = window_size_inc;
     return frame;
 }

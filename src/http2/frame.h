@@ -181,22 +181,6 @@ typedef struct {
     slice header_block_fragment;
 } http2_frame_continuation;
 
-typedef struct http2_frame {
-    union {
-        std::aligned_storage<sizeof(http2_frame_hdr), alignof(http2_frame_hdr)>::type hdr;
-        std::aligned_storage<sizeof(http2_frame_data), alignof(http2_frame_data)>::type data;
-        std::aligned_storage<sizeof(http2_frame_headers), alignof(http2_frame_headers)>::type headers;
-        std::aligned_storage<sizeof(http2_frame_priority), alignof(http2_frame_priority)>::type priority;
-        std::aligned_storage<sizeof(http2_frame_rst_stream), alignof(http2_frame_rst_stream)>::type rst_stream;
-        std::aligned_storage<sizeof(http2_frame_settings), alignof(http2_frame_settings)>::type settings;
-        std::aligned_storage<sizeof(http2_frame_push_promise), alignof(http2_frame_push_promise)>::type promise;
-        std::aligned_storage<sizeof(http2_frame_ping), alignof(http2_frame_ping)>::type ping;
-        std::aligned_storage<sizeof(http2_frame_goaway), alignof(http2_frame_goaway)>::type goaway;
-        std::aligned_storage<sizeof(http2_frame_window_update), alignof(http2_frame_window_update)>::type window_update;
-        std::aligned_storage<sizeof(http2_frame_continuation), alignof(http2_frame_continuation)>::type continuation;
-    };
-} http2_frame;
-
 #define HTTP2_STREAM_ID_MASK 0x7fffffff
 #define HTTP2_FRAME_HEADER_SIZE 9
 
@@ -204,7 +188,8 @@ void http2_frame_header_pack(uint8_t *out, const http2_frame_hdr *hd);
 void http2_frame_header_unpack(http2_frame_hdr *hd, const uint8_t *input);
 void http2_frame_header_init(http2_frame_hdr *hd, size_t length, uint8_t type, uint8_t flags, uint32_t stream_id);
 
-http2_frame_settings build_http2_frame_settings(int flag, const std::vector<http2_settings_entry> &settings);
+http2_frame_settings build_http2_frame_settings(int flag, std::vector<http2_settings_entry> &settings);
 http2_frame_settings build_http2_frame_settings_ack();
 http2_frame_ping build_http2_frame_ping(uint8_t payload[8], bool ack);
 http2_frame_goaway build_http2_frame_goaway(uint32_t error_code, uint32_t last_stream_id);
+http2_frame_window_update build_http2_frame_window_update(uint32_t stream_id, uint32_t window_size_inc);

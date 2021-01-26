@@ -39,75 +39,82 @@
 #include "src/http2/stream.h"
 #include "src/http2/frame.h"
 
-enum internal_stream_event {
-    HTTP2_STREAM_EVENT_HEADERS_R = 0,
-    HTTP2_STREAM_EVENT_HEADERS_S = 1,
-    HTTP2_STREAM_EVENT_PP_R = 2,  // PUSH_PROMISE
-    HTTP2_STREAM_EVENT_PP_S = 3,  // PUSH_PROMISE
-    HTTP2_STREAM_EVENT_ES_R = 4,  // END_STREAM
-    HTTP2_STREAM_EVENT_ES_S = 5,
-    HTTP2_STREAM_EVENT_RST_R = 6,  // RST_STREAM
-    HTTP2_STREAM_EVENT_RST_S = 7,  // RST_STREAM
+enum http2_stream_event {
+    STREAM_EVENT_H_R = 0,  // HEADERS Frame recv
+    STREAM_EVENT_H_S,      // HEADERS Frame send
+    STREAM_EVENT_PP_R,     // PUSH_PROMISE
+    STREAM_EVENT_PP_S,     // PUSH_PROMISE
+    STREAM_EVENT_ES_R,     // END_STREAM Recv
+    STREAM_EVENT_ES_S,     // END_STREAM Send
+    STREAM_EVENT_RST_R,    // RST_STREAM
+    STREAM_EVENT_RST_S,    // RST_STREAM
+
+    _STREAM_EVENT_COUNTER
 };
 
-const http2_stream::status event_status_table[8][8] = {
-    {http2_stream::OPEN, http2_stream::ERROR, http2_stream::HALF_CLOSED_LOCAL, http2_stream::ERROR, http2_stream::ERROR,
-     http2_stream::ERROR, http2_stream::ERROR, http2_stream::ERROR},
-    {http2_stream::OPEN, http2_stream::HALF_CLOSED_REMOTE, http2_stream::ERROR, http2_stream::ERROR,
-     http2_stream::ERROR, http2_stream::ERROR, http2_stream::ERROR, http2_stream::ERROR},
-    {http2_stream::RESERVED_REMOTE, http2_stream::ERROR, http2_stream::ERROR, http2_stream::ERROR, http2_stream::ERROR,
-     http2_stream::ERROR, http2_stream::ERROR, http2_stream::ERROR},
-    {http2_stream::RESERVED_LOCAL, http2_stream::ERROR, http2_stream::ERROR, http2_stream::ERROR, http2_stream::ERROR,
-     http2_stream::ERROR, http2_stream::ERROR, http2_stream::ERROR},
-    {http2_stream::ERROR, http2_stream::ERROR, http2_stream::ERROR, http2_stream::HALF_CLOSED_REMOTE,
-     http2_stream::CLOSED, http2_stream::ERROR, http2_stream::ERROR, http2_stream::ERROR},
-    {http2_stream::ERROR, http2_stream::ERROR, http2_stream::ERROR, http2_stream::HALF_CLOSED_LOCAL,
-     http2_stream::ERROR, http2_stream::CLOSED, http2_stream::ERROR, http2_stream::ERROR},
-    {http2_stream::ERROR, http2_stream::CLOSED, http2_stream::CLOSED, http2_stream::CLOSED, http2_stream::CLOSED,
-     http2_stream::CLOSED, http2_stream::ERROR, http2_stream::ERROR},
-    {http2_stream::ERROR, http2_stream::CLOSED, http2_stream::CLOSED, http2_stream::CLOSED, http2_stream::CLOSED,
-     http2_stream::CLOSED, http2_stream::ERROR, http2_stream::ERROR},
+const http2_stream::state
+    event_status_table[static_cast<int>(_STREAM_EVENT_COUNTER)][static_cast<int>(http2_stream::ERROR)] = {
+        {http2_stream::OPEN, http2_stream::ERROR, http2_stream::HALF_CLOSED_LOCAL, http2_stream::ERROR,
+         http2_stream::ERROR, http2_stream::ERROR, http2_stream::ERROR},
+        {http2_stream::OPEN, http2_stream::HALF_CLOSED_REMOTE, http2_stream::ERROR, http2_stream::ERROR,
+         http2_stream::ERROR, http2_stream::ERROR, http2_stream::ERROR},
+        {http2_stream::RESERVED_REMOTE, http2_stream::ERROR, http2_stream::ERROR, http2_stream::ERROR,
+         http2_stream::ERROR, http2_stream::ERROR, http2_stream::ERROR},
+        {http2_stream::RESERVED_LOCAL, http2_stream::ERROR, http2_stream::ERROR, http2_stream::ERROR,
+         http2_stream::ERROR, http2_stream::ERROR, http2_stream::ERROR},
+        {http2_stream::ERROR, http2_stream::ERROR, http2_stream::ERROR, http2_stream::HALF_CLOSED_REMOTE,
+         http2_stream::CLOSED, http2_stream::ERROR, http2_stream::ERROR},
+        {http2_stream::ERROR, http2_stream::ERROR, http2_stream::ERROR, http2_stream::HALF_CLOSED_LOCAL,
+         http2_stream::ERROR, http2_stream::CLOSED, http2_stream::ERROR},
+        {http2_stream::ERROR, http2_stream::CLOSED, http2_stream::CLOSED, http2_stream::CLOSED, http2_stream::CLOSED,
+         http2_stream::CLOSED, http2_stream::ERROR},
+        {http2_stream::ERROR, http2_stream::CLOSED, http2_stream::CLOSED, http2_stream::CLOSED, http2_stream::CLOSED,
+         http2_stream::CLOSED, http2_stream::ERROR},
 };
 
-http2_stream::status get_next_status(internal_stream_event event, http2_stream::status cur_status) {
-    return event_status_table[event][cur_status];
+http2_stream::state get_next_status(http2_stream_event event, http2_stream::state status) {
+    return event_status_table[event][status];
 }
 
 void http2_stream::send_push_promise() {
-    _cur_status = get_next_status(HTTP2_STREAM_EVENT_PP_S, _cur_status);
+    _state = get_next_status(STREAM_EVENT_PP_S, _state);
 }
 
 void http2_stream::recv_push_promise() {
-    _cur_status = get_next_status(HTTP2_STREAM_EVENT_PP_R, _cur_status);
+    _state = get_next_status(STREAM_EVENT_PP_R, _state);
 }
 
 void http2_stream::send_headers() {
-    _cur_status = get_next_status(HTTP2_STREAM_EVENT_HEADERS_S, _cur_status);
+    _state = get_next_status(STREAM_EVENT_H_S, _state);
 }
 
-void http2_stream::recv_headers() {
-    _cur_status = get_next_status(HTTP2_STREAM_EVENT_HEADERS_R, _cur_status);
+void http2_stream::recv_headers(const std::vector<hpack::mdelem_data> &headers) {
+    _state = get_next_status(STREAM_EVENT_H_R, _state);
 }
 
 void http2_stream::send_rst_stream() {
-    _cur_status = get_next_status(HTTP2_STREAM_EVENT_RST_S, _cur_status);
+    _state = get_next_status(STREAM_EVENT_RST_S, _state);
 }
 
-void http2_stream::recv_rst_stream() {
-    _cur_status = get_next_status(HTTP2_STREAM_EVENT_RST_R, _cur_status);
+void http2_stream::recv_rst_stream(uint32_t error_code) {
+    _state = get_next_status(STREAM_EVENT_RST_R, _state);
 }
 
 void http2_stream::send_end_stream() {
-    _cur_status = get_next_status(HTTP2_STREAM_EVENT_ES_S, _cur_status);
+    _state = get_next_status(STREAM_EVENT_ES_S, _state);
 }
 
 void http2_stream::recv_end_stream() {
-    _cur_status = get_next_status(HTTP2_STREAM_EVENT_ES_R, _cur_status);
+    _state = get_next_status(STREAM_EVENT_ES_R, _state);
 }
 
 // ---------------------------------
-http2_stream::http2_stream(uint32_t stream_id)
-    : _cur_status(IDLE) {}
+
+http2_stream::http2_stream(ConnectionFlowControl *cfc, uint32_t stream_id)
+    : _sfc(stream_id, cfc)
+    , _stream_id(stream_id)
+    , _connection_id(cfc->ConnectionId())
+    , _state(IDLE) {}
 
 uint8_t http2_stream::frame_type() {
     return _frame_type;

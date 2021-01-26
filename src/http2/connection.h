@@ -9,6 +9,7 @@
 #include "src/hpack/dynamic_metadata.h"
 #include "src/utils/slice_buffer.h"
 
+class ConnectionFlowControl;
 class http2_response;
 class http2_stream;
 class http2_connection {
@@ -34,7 +35,9 @@ public:
     int package_process(const uint8_t *data, uint32_t len);
     void async_send_response(std::shared_ptr<http2_response> rsp);
 
-    uint32_t local_max_frame_size();
+    inline uint32_t local_max_frame_size() const {
+        return _local_settings[HTTP2_SETTINGS_MAX_FRAME_SIZE];
+    }
 
 private:
     // if fail return 0
@@ -54,6 +57,20 @@ private:
     void send_tcp_data(slice_buffer &sb);
     void send_tcp_data(slice s);
 
+    void announced_init_settings();
+
+    http2_settings_entry make_settings_entry(http2_setting_id id, uint32_t value);
+    uint32_t local_settings(http2_setting_id id);
+    void send_http2_frame(http2_frame_data *);
+    void send_http2_frame(http2_frame_headers *);
+    void send_http2_frame(http2_frame_priority *);
+    void send_http2_frame(http2_frame_rst_stream *);
+    void send_http2_frame(http2_frame_settings *);
+    void send_http2_frame(http2_frame_push_promise *);
+    void send_http2_frame(http2_frame_ping *);
+    void send_http2_frame(http2_frame_goaway *);
+    void send_http2_frame(http2_frame_window_update *);
+
 private:
     hpack::dynamic_metadata_table _dynamic_table;
     http2::TcpSendService *_sender_service;
@@ -63,6 +80,8 @@ private:
     uint32_t _local_settings[HTTP2_NUMBER_OF_SETTINGS];
     uint32_t _remote_settings[HTTP2_NUMBER_OF_SETTINGS];
 
+    std::shared_ptr<ConnectionFlowControl> _flow_control;
+
     bool _finish_handshake;
     uint32_t _last_stream_id;
     uint32_t _next_stream_id;
@@ -71,13 +90,17 @@ private:
 
     hpack::mdelem_send_record _send_record;
 
-    uint32_t _goaway_stream_id;
+    uint32_t _received_goaway_stream_id;
     bool _received_goaway;
+
+    uint32_t _sent_goaway_stream_id;
+    bool _sent_goaway;
 
     int64_t _local_window_size;
     int64_t _remote_window_size;
     int64_t _init_window_size;
 
+    // Because the END_HEADERS flag is missing
     bool _next_frame_limit;
-    uint32_t _next_frame_stream_id;
+    uint32_t _next_stream_id_limit;
 };

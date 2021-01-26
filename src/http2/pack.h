@@ -13,5 +13,3 @@ slice pack_http2_frame_ping(http2_frame_ping *frame);
 slice pack_http2_frame_goaway(http2_frame_goaway *frame);
 slice pack_http2_frame_window_update(http2_frame_window_update *frame);
 slice pack_http2_frame_continuation(http2_frame_continuation *frame);
-
-slice_buffer pack_http2_frame(http2_frame *frame, uint32_t max_frame_size = 0);

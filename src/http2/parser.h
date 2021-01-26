@@ -14,5 +14,3 @@ int parse_http2_frame_ping(http2_frame_hdr *hdr, const uint8_t *input, http2_fra
 int parse_http2_frame_goaway(http2_frame_hdr *hdr, const uint8_t *input, http2_frame_goaway *output);
 int parse_http2_frame_window_update(http2_frame_hdr *hdr, const uint8_t *input, http2_frame_window_update *output);
 int parse_http2_frame_continuation(http2_frame_hdr *hdr, const uint8_t *input, http2_frame_continuation *output);
-
-int parse_http2_package(http2_frame *frame, const uint8_t *input, http2_frame_hdr *hdr);
