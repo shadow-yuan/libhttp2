@@ -15,7 +15,7 @@ slice_buffer pack_http2_frame_data(http2_frame_data *frame, uint32_t max_frame_s
         frame_length =
             (frame->data.size() + pad_len) < max_frame_size ? (frame->data.size() + pad_len) : max_frame_size;
 
-        slice data = MakeSliceByLength(frame_length);
+        slice data = MakeSliceByLength(frame_length + HTTP2_FRAME_HEADER_SIZE);
         uint8_t *p = const_cast<uint8_t *>(data.data());
         http2_frame_header_pack(p, &frame->hdr);
         p += HTTP2_FRAME_HEADER_SIZE;

@@ -54,12 +54,13 @@ set(HPACK_SOURCES
 )
 
 set(HTTP2_SOURCES
-    "${PROJECT_SOURCE_DIR}/src/http2/connection.cc"
+#    "${PROJECT_SOURCE_DIR}/src/http2/connection.cc"
     "${PROJECT_SOURCE_DIR}/src/http2/frame.cc"
     "${PROJECT_SOURCE_DIR}/src/http2/parser.cc"
+    "${PROJECT_SOURCE_DIR}/src/http2/pack.cc"
     "${PROJECT_SOURCE_DIR}/src/http2/settings.cc"
-    "${PROJECT_SOURCE_DIR}/src/http2/stream.cc"
-    "${PROJECT_SOURCE_DIR}/src/http2/transport.cc"
+#    "${PROJECT_SOURCE_DIR}/src/http2/stream.cc"
+#    "${PROJECT_SOURCE_DIR}/src/http2/transport.cc"
 )
 
 set(UTILS_SOURCES
@@ -75,7 +76,7 @@ target_sources(http2
 #    "${PROJECT_SOURCE_DIR}/src/http2.cc"
 #    "${PROJECT_SOURCE_DIR}/src/init.cc"
     ${HPACK_SOURCES}
-#    ${HTTP2_SOURCES}
+    ${HTTP2_SOURCES}
     ${UTILS_SOURCES}
 )
 
@@ -99,9 +100,6 @@ if (LIBHTTP2_BUILD_TESTS)
             PRIVATE
             "${PROJECT_SOURCE_DIR}/src/utils/testutil.cc"
             "${PROJECT_SOURCE_DIR}/src/utils/testutil.h"
-            "${PROJECT_SOURCE_DIR}/src/http2/parser.cc"
-            "${PROJECT_SOURCE_DIR}/src/http2/pack.cc"
-            "${PROJECT_SOURCE_DIR}/src/http2/frame.cc"
             "${test_file}"
         )
         target_link_libraries("${test_target_name}" http2)
