@@ -4,9 +4,11 @@
 #include <map>
 
 #include "http2/http2.h"
-#include "src/http2/settings.h"
+
 #include "src/hpack/send_record.h"
 #include "src/hpack/dynamic_metadata.h"
+#include "src/http2/frame.h"
+#include "src/http2/settings.h"
 #include "src/utils/slice_buffer.h"
 
 class ConnectionFlowControl;
@@ -60,7 +62,11 @@ private:
     void announced_init_settings();
 
     http2_settings_entry make_settings_entry(http2_setting_id id, uint32_t value);
-    uint32_t local_settings(http2_setting_id id);
+
+    inline uint32_t local_settings(http2_setting_id id) const {
+        return _local_settings[static_cast<int>(id)];
+    }
+
     void send_http2_frame(http2_frame_data *);
     void send_http2_frame(http2_frame_headers *);
     void send_http2_frame(http2_frame_priority *);

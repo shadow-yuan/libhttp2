@@ -60,10 +60,6 @@ http2_settings_entry http2_connection::make_settings_entry(http2_setting_id sett
     return entry;
 }
 
-uint32_t http2_connection::local_settings(http2_setting_id id) {
-    return _local_settings[static_cast<int>(id)];
-}
-
 void http2_connection::announced_init_settings() {
     std::vector<http2_settings_entry> vs;
     if (_client_side) {
@@ -96,7 +92,7 @@ uint32_t http2_connection::create_stream() {
     if (_next_stream_id >= http2_stream::MAX_STREAM_ID || _received_goaway) {
         return 0;
     }
-    auto stream = std::make_shared<http2_stream>(_next_stream_id, this);
+    auto stream = std::make_shared<http2_stream>(_flow_control.get(), _next_stream_id);
     _streams[_next_stream_id] = stream;
     _next_stream_id += 2;
     return stream->stream_id();
@@ -134,17 +130,15 @@ void http2_connection::send_goaway(uint32_t error_code, uint32_t last_stream_id)
 }
 
 void http2_connection::async_send_response(std::shared_ptr<http2_response> rsp) {
-    if (rsp->_stream->try_send()) {
-        // TODO(SHADOW)
-        // HEADERS, WINDOW_UPDATE, DATA
-    }
+    // TODO(SHADOW)
+    // HEADERS, WINDOW_UPDATE, DATA
 }
 
 int http2_connection::package_process(const uint8_t *package, uint32_t package_length) {
     if (package_length < HTTP2_FRAME_HEADER_SIZE) {
         log_error("process http2 package, package length(%u) < HTTP2_FRAME_HEADER_SIZE(9)", package_length);
         abort();
-        return;
+        return -1;
     }
 
     http2_frame_hdr hdr;
@@ -153,7 +147,7 @@ int http2_connection::package_process(const uint8_t *package, uint32_t package_l
         log_error("process http2 package, the payload is incomplete. package length(%u) < need(%u)", package_length,
                   hdr.length + HTTP2_FRAME_HEADER_SIZE);
         abort();
-        return;
+        return -1;
     }
 
     // check max frame size settings
@@ -266,8 +260,8 @@ void http2_connection::received_data(std::shared_ptr<http2_stream> &stream, http
     // Allow empty DATA frames(RFC 7540 )
     if (frame->data.empty()) return;
     if (stream) {
-        stream->push_data(frame->data);
-        stream->flow_control().RecvData(frame->data.size());
+        stream->append_data(frame->data);
+        stream->flow_control()->RecvData(frame->data.size());
     } else {
         _flow_control->RecvData(frame->data.size());
     }
@@ -284,7 +278,7 @@ void http2_connection::received_header(std::shared_ptr<http2_stream> &stream, ht
         return;
     }
     if (!stream) {
-        stream = std::make_shared<http2_stream>(_connection_id, frame->hdr.stream_id);
+        stream = std::make_shared<http2_stream>(_flow_control.get(), frame->hdr.stream_id);
         _streams[frame->hdr.stream_id] = stream;
     }
 
@@ -390,8 +384,8 @@ void http2_connection::received_push_promise(std::shared_ptr<http2_stream> &stre
 
     auto promise_stream = find_stream(frame->promised_stream_id);
     if (!promise_stream) {
-        promise_stream = std::make_shared<http2_stream>(frame->promised_stream_id);
-    } else if (promise_stream->get_status() != http2_stream::IDLE) {
+        promise_stream = std::make_shared<http2_stream>(_flow_control.get(), frame->promised_stream_id);
+    } else if (promise_stream->get_state() != http2_stream::IDLE) {
         send_goaway(HTTP2_PROTOCOL_ERROR);
         return;
     }
@@ -406,7 +400,7 @@ void http2_connection::received_push_promise(std::shared_ptr<http2_stream> &stre
         return;
     }
     if (!decoded_headers.empty()) {
-        promise_stream->push_headers(decoded_headers);
+        promise_stream->append_headers(decoded_headers);
     }
 }
 
@@ -435,7 +429,7 @@ void http2_connection::received_goaway(http2_frame_goaway *frame) {
     _received_goaway_stream_id = frame->last_stream_id;
     _received_goaway = true;
 
-    // 大于 _goaway_stream_id 的流仍可发送数据
+    // stream ID greater than _goaway_stream_id can still send data
     for (auto it = _streams.begin(); it != _streams.end(); ++it) {
         if (_client_side) {
             if (it->first & 1 && it->first <= _received_goaway_stream_id) {
@@ -465,7 +459,7 @@ void http2_connection::received_window_update(std::shared_ptr<http2_stream> &str
         _flow_control->RecvUpdate(frame->window_size_inc);
     } else {
         // for stream
-        stream->flow_control().RecvUpdate(frame->window_size_inc);
+        stream->flow_control()->RecvUpdate(frame->window_size_inc);
     }
 }
 
@@ -488,7 +482,7 @@ void http2_connection::received_continuation(std::shared_ptr<http2_stream> &stre
         return;
     }
     if (stream) {
-        stream->push_headers(decoded_headers);
+        stream->append_headers(decoded_headers);
     }
 }
 

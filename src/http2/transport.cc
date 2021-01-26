@@ -11,7 +11,7 @@
 
 struct transport_message {
     MultiProducerSingleConsumerQueue::Node node;
-    std::shared_ptr<http2_response> rsp;
+    std::shared_ptr<http2::Response> rsp;
 };
 
 http2_transport::http2_transport(http2::TcpSendService *sender)

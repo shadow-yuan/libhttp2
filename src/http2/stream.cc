@@ -52,7 +52,7 @@ enum http2_stream_event {
     _STREAM_EVENT_COUNTER
 };
 
-const http2_stream::state
+const http2_stream::State
     event_status_table[static_cast<int>(_STREAM_EVENT_COUNTER)][static_cast<int>(http2_stream::ERROR)] = {
         {http2_stream::OPEN, http2_stream::ERROR, http2_stream::HALF_CLOSED_LOCAL, http2_stream::ERROR,
          http2_stream::ERROR, http2_stream::ERROR, http2_stream::ERROR},
@@ -72,7 +72,7 @@ const http2_stream::state
          http2_stream::CLOSED, http2_stream::ERROR},
 };
 
-http2_stream::state get_next_status(http2_stream_event event, http2_stream::state status) {
+http2_stream::State get_next_status(http2_stream_event event, http2_stream::State status) {
     return event_status_table[event][status];
 }
 
@@ -89,6 +89,7 @@ void http2_stream::send_headers() {
 }
 
 void http2_stream::recv_headers(const std::vector<hpack::mdelem_data> &headers) {
+    _finish_header = false;
     _state = get_next_status(STREAM_EVENT_H_R, _state);
 }
 
@@ -102,19 +103,31 @@ void http2_stream::recv_rst_stream(uint32_t error_code) {
 
 void http2_stream::send_end_stream() {
     _state = get_next_status(STREAM_EVENT_ES_S, _state);
+    _sent_eos = true;
 }
 
 void http2_stream::recv_end_stream() {
     _state = get_next_status(STREAM_EVENT_ES_R, _state);
+    _received_eos = true;
 }
 
 // ---------------------------------
 
 http2_stream::http2_stream(ConnectionFlowControl *cfc, uint32_t stream_id)
-    : _sfc(stream_id, cfc)
+    : _flow_control(stream_id, cfc)
     , _stream_id(stream_id)
     , _connection_id(cfc->ConnectionId())
-    , _state(IDLE) {}
+    , _state(IDLE)
+    , _frame_flags(0)
+    , _frame_type(0)
+    , _finish_header(false) {
+    _read_closed = false;
+    _write_closed = false;
+    _received_eos = false;
+    _sent_eos = false;
+    _weight = 0;
+    _last_error = 0;
+}
 
 uint8_t http2_stream::frame_type() {
     return _frame_type;
@@ -140,13 +153,65 @@ void http2_stream::frame_flags(uint8_t flags) {
     }
 }
 
-void http2_stream::push_headers(const std::vector<hpack::mdelem_data> &headers) {
+void http2_stream::append_headers(const std::vector<hpack::mdelem_data> &headers) {
     for (size_t i = 0; i < headers.size(); i++) {
         _headers.emplace_back(headers[i]);
     }
 }
 
-void http2_stream::push_data(slice s) {
+void http2_stream::append_data(slice s) {
     slice obj(s.data(), s.size());
     _data_cache.add_slice(obj);
+}
+
+bool http2_stream::is_closed() const {
+    return _state == State::CLOSED;
+}
+
+uint32_t http2_stream::stream_id() const {
+    return _stream_id;
+}
+
+void http2_stream::set_weight(int32_t w) {
+    _weight = w;
+}
+
+http2_stream::State http2_stream::get_state() const {
+    return _state;
+}
+
+void http2_stream::mark_unwritable() {
+    _write_closed = true;
+}
+
+void http2_stream::mark_unreadable() {
+    _read_closed = true;
+}
+
+StreamFlowControl *http2_stream::flow_control() {
+    return &_flow_control;
+}
+
+bool http2_stream::try_send_push_promise() {
+    if (_write_closed) return false;
+    auto s = get_next_status(STREAM_EVENT_PP_S, _state);
+    return (s != State::ERROR);
+}
+
+bool http2_stream::try_send_headers() {
+    if (_write_closed) return false;
+    auto s = get_next_status(STREAM_EVENT_H_S, _state);
+    return (s != State::ERROR);
+}
+
+bool http2_stream::try_send_rst_stream() {
+    if (_write_closed) return false;
+    auto s = get_next_status(STREAM_EVENT_RST_S, _state);
+    return (s != State::ERROR);
+}
+
+bool http2_stream::try_send_end_stream() {
+    if (_write_closed) return false;
+    auto s = get_next_status(STREAM_EVENT_ES_S, _state);
+    return (s != State::ERROR);
 }

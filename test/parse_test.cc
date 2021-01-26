@@ -6,30 +6,30 @@ class ParserTest {};
 TEST(ParserTest, FramePing) {
     uint8_t buff[] = {0x00, 0x00, 0x08, 0x06, 0x01, 0x00, 0x00, 0x00, 0x00,
                       0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
-    http2_frame frame;
-    http2_frame_hdr *hdr = new (&frame.hdr)(http2_frame_hdr);
-    http2_frame_header_unpack(hdr, buff);
-    parse_http2_package(&frame, buff + 9, hdr);
+    http2_frame_hdr hdr;
+    http2_frame_header_unpack(&hdr, buff);
 
-    http2_frame_ping *ping = new (&frame.ping)(http2_frame_ping);
-    ASSERT_EQ(hdr->flags, 0x01);
-    ASSERT_EQ(hdr->type, 0x6);
-    ASSERT_EQ(hdr->length, 0x8);
-    ASSERT_EQ(*(uint64_t *)ping->opaque_data, 0x0);
+    http2_frame_ping frame;
+    parse_http2_frame_ping(&hdr, buff + 9, &frame);
+
+    ASSERT_EQ(hdr.flags, 0x01);
+    ASSERT_EQ(hdr.type, 0x6);
+    ASSERT_EQ(hdr.length, 0x8);
+    ASSERT_EQ(*(uint64_t *)frame.opaque_data, 0x0);
 }
 
 TEST(ParserTest, FrameSettings) {
     uint8_t buff[] = {0x00, 0x00, 0x00, 0x04, 0x01, 0x00, 0x00, 0x00, 0x00};
-    http2_frame frame;
-    http2_frame_hdr *hdr = new (&frame.hdr)(http2_frame_hdr);
-    http2_frame_header_unpack(hdr, buff);
-    parse_http2_package(&frame, buff + 9, hdr);
+    http2_frame_hdr hdr;
+    http2_frame_header_unpack(&hdr, buff);
 
-    http2_frame_settings *settings = new (&frame.settings)(http2_frame_settings);
-    ASSERT_EQ(hdr->flags, 0x01);
-    ASSERT_EQ(hdr->type, 0x4);
-    ASSERT_EQ(hdr->length, 0x0);
-    ASSERT_EQ(settings->settings.size(), 0);
+    http2_frame_settings frame;
+    parse_http2_frame_settings(&hdr, buff + 9, &frame);
+
+    ASSERT_EQ(hdr.flags, 0x01);
+    ASSERT_EQ(hdr.type, 0x4);
+    ASSERT_EQ(hdr.length, 0x0);
+    ASSERT_EQ(frame.settings.size(), 0);
 }
 
 TEST(ParserTest, FrameHeaders) {
@@ -41,17 +41,18 @@ TEST(ParserTest, FrameHeaders) {
                       0x66, 0x6c, 0x61, 0x74, 0x65, 0x2c, 0x67, 0x7a, 0x69, 0x70, 0x40, 0x0f, 0x61, 0x63, 0x63,
                       0x65, 0x70, 0x74, 0x2d, 0x65, 0x6e, 0x63, 0x6f, 0x64, 0x69, 0x6e, 0x67, 0x0d, 0x69, 0x64,
                       0x65, 0x6e, 0x74, 0x69, 0x74, 0x79, 0x2c, 0x67, 0x7a, 0x69, 0x70};
-    http2_frame frame;
-    http2_frame_hdr *hdr = new (&frame.hdr)(http2_frame_hdr);
-    http2_frame_header_unpack(hdr, buff);
-    parse_http2_package(&frame, buff + 9, hdr);
 
-    http2_frame_headers *headers = reinterpret_cast<http2_frame_headers *>(&frame.headers);
-    ASSERT_EQ(hdr->flags, 0x04);
-    ASSERT_EQ(hdr->type, 0x1);
-    ASSERT_EQ(hdr->length, 107);
-    ASSERT_EQ(hdr->stream_id, 1);
-    ASSERT_EQ(headers->header_block_fragment.size(), hdr->length);
+    http2_frame_hdr hdr;
+    http2_frame_header_unpack(&hdr, buff);
+
+    http2_frame_headers frame;
+    parse_http2_frame_headers(&hdr, buff + 9, &frame);
+
+    ASSERT_EQ(hdr.flags, 0x04);
+    ASSERT_EQ(hdr.type, 0x1);
+    ASSERT_EQ(hdr.length, 107);
+    ASSERT_EQ(hdr.stream_id, 1);
+    ASSERT_EQ(frame.header_block_fragment.size(), hdr.length);
 
     /*uint8_t header_block_fragment[] = {
         0x88, 0x40, 0x0c, 0x63, 0x6f, 0x6e, 0x74, 0x65, 0x6e, 0x74, 0x2d, 0x74, 0x79, 0x70, 0x65, 0x10, 0x61, 0x70,
@@ -64,32 +65,33 @@ TEST(ParserTest, FrameHeaders) {
 
 TEST(ParserTest, FrameData) {
     uint8_t buff[] = {0x00, 0x00, 0x07, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x02, 0x08, 0x01};
-    http2_frame frame;
-    http2_frame_hdr *hdr = new (&frame.hdr)(http2_frame_hdr);
-    http2_frame_header_unpack(hdr, buff);
-    parse_http2_package(&frame, buff + 9, hdr);
+    http2_frame_hdr hdr;
+    http2_frame_header_unpack(&hdr, buff);
+
+    http2_frame_data frame;
+    parse_http2_frame_data(&hdr, buff + 9, &frame);
 
     http2_frame_data *data = reinterpret_cast<http2_frame_data *>(&frame.data);
-    ASSERT_EQ(hdr->flags, 0);
-    ASSERT_EQ(hdr->type, 0);
-    ASSERT_EQ(hdr->length, 7);
-    ASSERT_EQ(hdr->stream_id, 1);
-    ASSERT_EQ(data->data.size(), 7);
+    ASSERT_EQ(hdr.flags, 0);
+    ASSERT_EQ(hdr.type, 0);
+    ASSERT_EQ(hdr.length, 7);
+    ASSERT_EQ(hdr.stream_id, 1);
+    ASSERT_EQ(frame.data.size(), 7);
 }
 
 TEST(ParserTest, FrameRST) {
     uint8_t buff[] = {0x00, 0x00, 0x04, 0x03, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00};
-    http2_frame frame;
-    http2_frame_hdr *hdr = new (&frame.hdr)(http2_frame_hdr);
-    http2_frame_header_unpack(hdr, buff);
-    parse_http2_package(&frame, buff + 9, hdr);
+    http2_frame_hdr hdr;
+    http2_frame_header_unpack(&hdr, buff);
 
-    http2_frame_rst_stream *rst = new (&frame.rst_stream)(http2_frame_rst_stream);
-    ASSERT_EQ(hdr->flags, 0);
-    ASSERT_EQ(hdr->type, 3);
-    ASSERT_EQ(hdr->length, 4);
-    ASSERT_EQ(hdr->stream_id, 1);
-    ASSERT_EQ(rst->error_code, 0);
+    http2_frame_rst_stream frame;
+    parse_http2_frame_rst_stream(&hdr, buff + 9, &frame);
+
+    ASSERT_EQ(hdr.flags, 0);
+    ASSERT_EQ(hdr.type, 3);
+    ASSERT_EQ(hdr.length, 4);
+    ASSERT_EQ(hdr.stream_id, 1);
+    ASSERT_EQ(frame.error_code, 0);
 }
 
 int main(int argc, char *argv[]) {

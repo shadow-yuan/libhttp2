@@ -13,9 +13,10 @@ TEST(TestPack, FrameHeaders) {
                       0x66, 0x6c, 0x61, 0x74, 0x65, 0x2c, 0x67, 0x7a, 0x69, 0x70, 0x40, 0x0f, 0x61, 0x63, 0x63,
                       0x65, 0x70, 0x74, 0x2d, 0x65, 0x6e, 0x63, 0x6f, 0x64, 0x69, 0x6e, 0x67, 0x0d, 0x69, 0x64,
                       0x65, 0x6e, 0x74, 0x69, 0x74, 0x79, 0x2c, 0x67, 0x7a, 0x69, 0x70};
-    http2_frame frame;
-    http2_frame_hdr *hdr = new (&frame.hdr)(http2_frame_hdr);
-    http2_frame_headers *headers = new (&frame.headers)(http2_frame_headers);
+
+    http2_frame_headers headers;
+    http2_frame_hdr *hdr = &headers.hdr;
+
     hdr->flags = 0x04;
     hdr->type = 0x1;
     hdr->length = 107;
@@ -27,28 +28,27 @@ TEST(TestPack, FrameHeaders) {
                      0x64, 0x65, 0x66, 0x6c, 0x61, 0x74, 0x65, 0x2c, 0x67, 0x7a, 0x69, 0x70, 0x40, 0x0f, 0x61, 0x63,
                      0x63, 0x65, 0x70, 0x74, 0x2d, 0x65, 0x6e, 0x63, 0x6f, 0x64, 0x69, 0x6e, 0x67, 0x0d, 0x69, 0x64,
                      0x65, 0x6e, 0x74, 0x69, 0x74, 0x79, 0x2c, 0x67, 0x7a, 0x69, 0x70};
-    headers->header_block_fragment = MakeStaticSlice(tmp, sizeof(tmp));
-    ASSERT_EQ(headers->header_block_fragment.size(), 107);
-    slice_buffer slice_buf = pack_http2_frame(&frame);
-    ASSERT_EQ(slice_buf.slice_count(), 1);
-    ASSERT_EQ(memcmp(slice_buf.front().data(), buff, slice_buf.front().size()), 0);
+    headers.header_block_fragment = MakeStaticSlice(tmp, sizeof(tmp));
+    ASSERT_EQ(headers.header_block_fragment.size(), 107);
+    slice slice_buf = pack_http2_frame_headers(&headers);
+    ASSERT_EQ(memcmp(slice_buf.data(), buff, slice_buf.size()), 0);
 }
 
 TEST(TestPack, FrameData) {
     uint8_t buff[] = {0x00, 0x00, 0x1f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x1a,
                       0x0a, 0x18, 0x54, 0x68, 0x69, 0x73, 0x20, 0x69, 0x73, 0x20, 0x61, 0x20, 0x6d, 0x65,
                       0x73, 0x73, 0x61, 0x67, 0x65, 0x20, 0x74, 0x65, 0x78, 0x74, 0x3a, 0x31};
-    http2_frame frame;
-    http2_frame_hdr *hdr = new (&frame.hdr)(http2_frame_hdr);
-    http2_frame_data *data = new (&frame.data)(http2_frame_data);
+    http2_frame_data data;
+    http2_frame_hdr *hdr = &data.hdr;
+
     hdr->flags = 0;
     hdr->type = 0;
     hdr->length = 31;
     hdr->stream_id = 1;
     uint8_t tmp[] = {0x00, 0x00, 0x00, 0x00, 0x1a, 0x0a, 0x18, 0x54, 0x68, 0x69, 0x73, 0x20, 0x69, 0x73, 0x20, 0x61,
                      0x20, 0x6d, 0x65, 0x73, 0x73, 0x61, 0x67, 0x65, 0x20, 0x74, 0x65, 0x78, 0x74, 0x3a, 0x31};
-    data->data = MakeStaticSlice(tmp, sizeof(tmp));
-    slice_buffer slice_buf = pack_http2_frame(&frame, 1 << 23);
+    data.data = MakeStaticSlice(tmp, sizeof(tmp));
+    slice_buffer slice_buf = pack_http2_frame_data(&data, 1 << 23);
     ASSERT_EQ(slice_buf.slice_count(), 1);
     ASSERT_EQ(memcmp(slice_buf.front().data(), buff, slice_buf.front().size()), 0);
 }
@@ -57,51 +57,47 @@ TEST(TestPack, FrameData2) {
     uint8_t buff[] = {0x00, 0x00, 0x1f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x1a,
                       0x0a, 0x18, 0x54, 0x68, 0x69, 0x73, 0x20, 0x69, 0x73, 0x20, 0x61, 0x20, 0x6d, 0x65,
                       0x73, 0x73, 0x61, 0x67, 0x65, 0x20, 0x74, 0x65, 0x78, 0x74, 0x3a, 0x31};
-    http2_frame frame;
-    http2_frame_hdr *hdr = new (&frame.hdr)(http2_frame_hdr);
-    http2_frame_data *data = new (&frame.data)(http2_frame_data);
+    http2_frame_data data;
+    http2_frame_hdr *hdr = &data.hdr;
+
     hdr->flags = 0;
     hdr->type = 0;
     hdr->length = 31;
     hdr->stream_id = 1;
     uint8_t tmp[] = {0x00, 0x00, 0x00, 0x00, 0x1a, 0x0a, 0x18, 0x54, 0x68, 0x69, 0x73, 0x20, 0x69, 0x73, 0x20, 0x61,
                      0x20, 0x6d, 0x65, 0x73, 0x73, 0x61, 0x67, 0x65, 0x20, 0x74, 0x65, 0x78, 0x74, 0x3a, 0x31};
-    data->data = MakeStaticSlice(tmp, sizeof(tmp));
-    slice_buffer slice_buf = pack_http2_frame(&frame, 16);
+    data.data = MakeStaticSlice(tmp, sizeof(tmp));
+    slice_buffer slice_buf = pack_http2_frame_data(&data, 16);
     ASSERT_EQ(slice_buf.slice_count(), 2);
 }
 
 TEST(TestPack, FramePing) {
     uint8_t buff[] = {0x00, 0x00, 0x08, 0x06, 0x01, 0x00, 0x00, 0x00, 0x00,
                       0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
-    http2_frame frame;
-    http2_frame_hdr *hdr = new (&frame.hdr)(http2_frame_hdr);
-    http2_frame_ping *ping = new (&frame.ping)(http2_frame_ping);
+    http2_frame_ping ping;
+    http2_frame_hdr *hdr = &ping.hdr;
+
     hdr->flags = 0x01;
     hdr->type = 0x6;
     hdr->length = 0x8;
     hdr->stream_id = 0;
-    *(uint64_t *)ping->opaque_data = 0x0;
-    slice_buffer slice_buf;
-    slice_buf = pack_http2_frame(&frame, 0);
-    ASSERT_EQ(slice_buf.slice_count(), 1);
-    ASSERT_EQ(memcmp(slice_buf.front().data(), buff, sizeof(buff)), 0);
+    *(uint64_t *)ping.opaque_data = 0x0;
+    slice slice_buf = pack_http2_frame_ping(&ping);
+    ASSERT_EQ(memcmp(slice_buf.data(), buff, sizeof(buff)), 0);
 }
 
 TEST(TestPack, FrameRST) {
     uint8_t buff[] = {0x00, 0x00, 0x04, 0x03, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00};
-    http2_frame frame;
-    http2_frame_hdr *hdr = new (&frame.hdr)(http2_frame_hdr);
+
+    http2_frame_rst_stream rst;
+    http2_frame_hdr *hdr = &rst.hdr;
     hdr->length = 4;
     hdr->flags = 0;
     hdr->type = 3;
     hdr->stream_id = 1;
-    http2_frame_rst_stream *rst = new (&frame.rst_stream)(http2_frame_rst_stream);
-    rst->error_code = 0;
-    slice_buffer slice_buf;
-    slice_buf = pack_http2_frame(&frame, 0);
-    ASSERT_EQ(slice_buf.slice_count(), 1);
-    ASSERT_EQ(memcmp(slice_buf.front().data(), buff, slice_buf.front().size()), 0);
+    rst.error_code = 0;
+    slice slice_buf = pack_http2_frame_rst_stream(&rst);
+    ASSERT_EQ(memcmp(slice_buf.data(), buff, slice_buf.size()), 0);
 }
 
 int main(int argc, char *argv[]) {

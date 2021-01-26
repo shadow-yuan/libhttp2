@@ -54,13 +54,14 @@ set(HPACK_SOURCES
 )
 
 set(HTTP2_SOURCES
-#    "${PROJECT_SOURCE_DIR}/src/http2/connection.cc"
+    "${PROJECT_SOURCE_DIR}/src/http2/connection.cc"
+    "${PROJECT_SOURCE_DIR}/src/http2/flow_control.cc"
     "${PROJECT_SOURCE_DIR}/src/http2/frame.cc"
-    "${PROJECT_SOURCE_DIR}/src/http2/parser.cc"
     "${PROJECT_SOURCE_DIR}/src/http2/pack.cc"
+    "${PROJECT_SOURCE_DIR}/src/http2/parser.cc"
     "${PROJECT_SOURCE_DIR}/src/http2/settings.cc"
-#    "${PROJECT_SOURCE_DIR}/src/http2/stream.cc"
-#    "${PROJECT_SOURCE_DIR}/src/http2/transport.cc"
+    "${PROJECT_SOURCE_DIR}/src/http2/stream.cc"
+    "${PROJECT_SOURCE_DIR}/src/http2/transport.cc"
 )
 
 set(UTILS_SOURCES
@@ -73,8 +74,8 @@ set(UTILS_SOURCES
 
 target_sources(http2
     PRIVATE
-#    "${PROJECT_SOURCE_DIR}/src/http2.cc"
-#    "${PROJECT_SOURCE_DIR}/src/init.cc"
+    "${PROJECT_SOURCE_DIR}/src/http2.cc"
+    "${PROJECT_SOURCE_DIR}/src/init.cc"
     ${HPACK_SOURCES}
     ${HTTP2_SOURCES}
     ${UTILS_SOURCES}
@@ -115,9 +116,9 @@ if (LIBHTTP2_BUILD_TESTS)
     libhttp2_test("${PROJECT_SOURCE_DIR}/test/dynamic_table_test.cc")
     libhttp2_test("${PROJECT_SOURCE_DIR}/test/hpack_test.cc")
     libhttp2_test("${PROJECT_SOURCE_DIR}/test/huffman_test.cc")
+    libhttp2_test("${PROJECT_SOURCE_DIR}/test/pack_test.cc")
+    libhttp2_test("${PROJECT_SOURCE_DIR}/test/parse_test.cc")
     libhttp2_test("${PROJECT_SOURCE_DIR}/test/slice_test.cc")
     libhttp2_test("${PROJECT_SOURCE_DIR}/test/static_table_test.cc")
-    libhttp2_test("${PROJECT_SOURCE_DIR}/test/parse_test.cc")
-    libhttp2_test("${PROJECT_SOURCE_DIR}/test/pack_test.cc")
 
 endif(LIBHTTP2_BUILD_TESTS)
