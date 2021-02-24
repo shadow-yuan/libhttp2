@@ -32,7 +32,7 @@ public:
      * Need to provide one or more complete http2 data package. To get the
      * complete http2 package, please check CheckHttp2PackageLength function.
      */
-    void ReceivedHttp2Data(uint16_t cid, const void *buf, size_t len) override;
+    void ReceivedHttp2Data(uint64_t cid, const void *buf, size_t len) override;
 
     // Call this function to notify a connection to be disconnected.
     void Disconnect(uint64_t cid) override;
@@ -79,7 +79,7 @@ void TransportImpl::ConnectionEstablished(uint64_t cid, bool client) {
  * Need to provide one or more complete http2 data package. To get the
  * complete http2 package, please check CheckHttp2PackageLength function.
  */
-void TransportImpl::ReceivedHttp2Data(uint16_t cid, const void *buf, size_t len) {
+void TransportImpl::ReceivedHttp2Data(uint64_t cid, const void *buf, size_t len) {
     _impl->received_data(cid, buf, len);
 }
 

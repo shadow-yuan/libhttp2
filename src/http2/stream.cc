@@ -91,6 +91,11 @@ void http2_stream::send_headers() {
 void http2_stream::recv_headers(const std::vector<hpack::mdelem_data> &headers) {
     _finish_header = false;
     _state = get_next_status(STREAM_EVENT_H_R, _state);
+    _headers.clear();
+    _headers.resize(headers.size());
+    for (size_t i = 0; i < headers.size(); i++) {
+        _headers[i] = headers[i];
+    }
 }
 
 void http2_stream::send_rst_stream() {
@@ -99,6 +104,7 @@ void http2_stream::send_rst_stream() {
 
 void http2_stream::recv_rst_stream(uint32_t error_code) {
     _state = get_next_status(STREAM_EVENT_RST_R, _state);
+    _last_error = error_code;
 }
 
 void http2_stream::send_end_stream() {

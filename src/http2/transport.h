@@ -22,7 +22,7 @@ public:
     size_t get_max_header_size();
     int check_package_length(uint64_t cid, const void *data, size_t len);
     void connection_enter(uint64_t cid, bool client_side);
-    void received_data(uint16_t cid, const void *buf, size_t len);
+    void received_data(uint64_t cid, const void *buf, size_t len);
     void connection_leave(uint64_t cid);
 
 private:

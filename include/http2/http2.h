@@ -90,7 +90,7 @@ public:
      * Need to provide one or more complete http2 data package. To get the
      * complete http2 package, please check CheckHttp2PackageLength function.
      */
-    virtual void ReceivedHttp2Data(uint16_t cid, const void *buf, size_t len) = 0;
+    virtual void ReceivedHttp2Data(uint64_t cid, const void *buf, size_t len) = 0;
 
     // Call this function to notify a connection to be disconnected.
     virtual void Disconnect(uint64_t cid) = 0;

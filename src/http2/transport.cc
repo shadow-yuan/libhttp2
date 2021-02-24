@@ -103,7 +103,7 @@ void http2_transport::connection_enter(uint64_t cid, bool client_side) {
     }
 }
 
-void http2_transport::received_data(uint16_t cid, const void *buf, size_t len) {
+void http2_transport::received_data(uint64_t cid, const void *buf, size_t len) {
     auto conn = find_connection(cid);
     if (!conn) return;
 
