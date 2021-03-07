@@ -1,3 +1,4 @@
+#include <string.h>
 #include "src/http2/pack.h"
 #include "src/utils/testutil.h"
 #include "src/utils/slice_buffer.h"

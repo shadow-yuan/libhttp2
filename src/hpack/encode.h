@@ -17,6 +17,7 @@ slice encode_update_max_size(uint32_t max_size);
 slice encode_with_incremental_indexing(const mdelem_data &mdel);
 
 // 6.2.2 Literal Header Field without Indexing
+slice encode_without_indexing(const mdelem_data &mdel, uint32_t key_index);
 slice encode_without_indexing(const mdelem_data &mdel);
 
 // 6.2.3 Literal Header Field Never Indexed

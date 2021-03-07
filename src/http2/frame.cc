@@ -1,4 +1,5 @@
 #include "src/http2/frame.h"
+#include <string.h>
 #include "src/utils/byte_order.h"
 
 void http2_frame_header_pack(uint8_t *buf, const http2_frame_hdr *hd) {

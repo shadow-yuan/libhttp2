@@ -1,4 +1,5 @@
 #include "src/http2/parser.h"
+#include <string.h>
 #include "src/http2/settings.h"
 #include "src/http2/errors.h"
 #include "src/utils/byte_order.h"

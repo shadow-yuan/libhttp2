@@ -38,3 +38,4 @@ inline hpack::static_metadata *get_static_mdelem_table() {
 // Find the matching entry index from the static table.
 // Return 0 means not found.
 uint32_t full_match_static_mdelem_index(const hpack::mdelem_data &mdel);
+bool check_key_exists(const slice &key);

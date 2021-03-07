@@ -1,4 +1,5 @@
 #include "src/hpack/dynamic_metadata.h"
+#include <stdio.h>
 
 namespace hpack {
 
@@ -24,6 +25,16 @@ void dynamic_metadata_table::push_mdelem_data(const mdelem_data &md) {
     _current_table_size += MDELEM_SIZE(md);
     _current_table_size += 32;
     adjust_dynamic_table_size();
+    printf("dynamic_metadata_table => key:[%s] value:[%s]\n", md.key.to_string().c_str(), md.value.to_string().c_str());
+
+    printf("---- Scan the dynamic table ----\n");
+    for (size_t i = 0; i < _dynamic_table.size(); i++) {
+        uint32_t idx = i + 61 + 1;
+        std::string str_key = _dynamic_table[i].key.to_string();
+        std::string str_value = _dynamic_table[i].value.to_string();
+        printf("index:%u key:[%s] value:[%s]\n", idx, str_key.c_str(), str_value.c_str());
+    }
+    printf("---- ---- ---- ---- ---- ---- ----\n");
 }
 
 // when recv SETTINGS FRAME
@@ -66,19 +77,6 @@ void dynamic_metadata_table::adjust_dynamic_table_size() {
         auto element_size = MDELEM_SIZE(entry);
         _current_table_size -= element_size + 32;
         _dynamic_table.pop_back();
-    }
-}
-
-void dynamic_metadata_table::roll_back(uint32_t count) {
-    uint32_t n = _dynamic_table.size();
-    if (count <= n) {
-        while (count > 0) {
-            const mdelem_data &mdel = _dynamic_table.front();
-            auto element_size = MDELEM_SIZE(mdel);
-            _current_table_size -= element_size + 32;
-            _dynamic_table.pop_front();
-            count--;
-        }
     }
 }
 }  // namespace hpack

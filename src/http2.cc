@@ -9,13 +9,7 @@ public:
     explicit TransportImpl(TcpSendService *sender);
     ~TransportImpl();
 
-    void SetDataNotificationService(DataService *service) override;
-
-    // Send response message asynchronously.
-    void AsyncSendResponse(std::shared_ptr<Response> rsp) override;
-
-    // Call this function to get the maximum header size of the http2 package.
-    size_t GetHttp2PackageMaxHeader() override;
+    Stream *CreateStream(uint64_t connection_id) override;
 
     /*
      * Return -1 means an error occurred, return 0 means still need to provide
@@ -46,18 +40,8 @@ TransportImpl::TransportImpl(TcpSendService *sender)
 
 TransportImpl::~TransportImpl() {}
 
-void TransportImpl::SetDataNotificationService(DataService *service) {
-    _impl->set_data_notification_service(service);
-}
-
-// Send response message asynchronously.
-void TransportImpl::AsyncSendResponse(std::shared_ptr<Response> rsp) {
-    _impl->async_send_response(rsp);
-}
-
-// Call this function to get the maximum header size of the http2 package.
-size_t TransportImpl::GetHttp2PackageMaxHeader() {
-    return _impl->get_max_header_size();
+Stream *TransportImpl::CreateStream(uint64_t connection_id) {
+    return _impl->create_stream(connection_id);
 }
 
 /*

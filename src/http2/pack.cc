@@ -1,5 +1,6 @@
 #include "src/http2/pack.h"
 #include <assert.h>
+#include <string.h>
 #include "src/utils/byte_order.h"
 
 slice_buffer pack_http2_frame_data(http2_frame_data *frame, uint32_t max_frame_size) {

@@ -8,8 +8,6 @@
 #include "src/http2/flow_control.h"
 #include "src/utils/log.h"
 #include "src/http2/pack.h"
-#include "src/http2/response.h"
-#include "src/http2/message.h"
 #include "src/http2/flow_control.h"
 
 http2_connection::http2_connection(http2::TcpSendService *sender, uint64_t cid, bool client_side)
@@ -38,6 +36,9 @@ http2_connection::http2_connection(http2::TcpSendService *sender, uint64_t cid, 
     } else {
         _next_stream_id = 2;
     }
+    hpack::compressor_init(&_send_record);
+    hpack::compressor_set_max_table_size(&_send_record, _remote_settings[HTTP2_SETTINGS_HEADER_TABLE_SIZE]);
+
     _finish_handshake = false;
     _last_stream_id = 0;
 
@@ -51,7 +52,9 @@ http2_connection::http2_connection(http2::TcpSendService *sender, uint64_t cid, 
     announced_init_settings();
 }
 
-http2_connection::~http2_connection() {}
+http2_connection::~http2_connection() {
+    hpack::compressor_destroy(&_send_record);
+}
 
 http2_settings_entry http2_connection::make_settings_entry(http2_setting_id setting_id, uint32_t value) {
     http2_settings_entry entry;
@@ -89,6 +92,7 @@ void http2_connection::announced_init_settings() {
 }
 
 uint32_t http2_connection::create_stream() {
+    std::lock_guard<std::mutex> lck(_mutex);
     if (_next_stream_id >= http2_stream::MAX_STREAM_ID || _received_goaway) {
         return 0;
     }
@@ -98,7 +102,13 @@ uint32_t http2_connection::create_stream() {
     return stream->stream_id();
 }
 
+void http2_connection::destroy_stream(uint32_t stream_id) {
+    std::lock_guard<std::mutex> lck(_mutex);
+    _streams.erase(stream_id);
+}
+
 std::shared_ptr<http2_stream> http2_connection::find_stream(uint32_t stream_id) {
+    std::lock_guard<std::mutex> lck(_mutex);
     auto it = _streams.find(stream_id);
     if (it == _streams.end()) {
         return nullptr;
@@ -128,10 +138,26 @@ void http2_connection::send_goaway(uint32_t error_code, uint32_t last_stream_id)
     _sent_goaway_stream_id = last_stream_id;
     _sent_goaway = true;
 }
-
+/*
 void http2_connection::async_send_response(std::shared_ptr<http2_response> rsp) {
     // TODO(SHADOW)
     // HEADERS, WINDOW_UPDATE, DATA
+    auto stream_id = rsp->StreamId();
+    auto stream = find_stream(stream_id);
+    if (stream_id > 0 && stream) {
+        serialize_http2_response(stream, rsp);
+    }
+}
+*/
+void http2_connection::end_of_stream(uint32_t stream_id) {
+    auto stream = find_stream(stream_id);
+    if (stream) {
+        end_of_stream(stream);
+        destroy_stream(stream_id);
+    }
+}
+void http2_connection::end_of_stream(std::shared_ptr<http2_stream> &stream) {
+    // grpc-status: 0
 }
 
 int http2_connection::package_process(const uint8_t *package, uint32_t package_length) {
@@ -259,12 +285,26 @@ void http2_connection::received_data(std::shared_ptr<http2_stream> &stream, http
     }
     // Allow empty DATA frames(RFC 7540 )
     if (frame->data.empty()) return;
-    if (stream) {
-        stream->append_data(frame->data);
-        stream->flow_control()->RecvData(frame->data.size());
-    } else {
+    if (!stream) {
         _flow_control->RecvData(frame->data.size());
+        return;
     }
+    stream->append_data(frame->data);
+    stream->flow_control()->RecvData(frame->data.size());
+
+    // TODO(SHADOW): do rpc call
+    // and if sync response
+    std::vector<hpack::mdelem_data> headers;
+    headers.push_back({":status", "200"});
+    headers.push_back({"content-type", "application/grpc"});
+    headers.push_back({"grpc-accept-encoding", "identity,deflate,gzip"});
+    headers.push_back({"accept-encoding", "identity,gzip"});
+    bool use_true_binary_metadata = _remote_settings[HTTP2_SETTINGS_GRPC_ALLOW_TRUE_BINARY_METADATA];
+    slice_buffer header_block_fragment;
+    hpack::compressor_encode_headers(&_send_record, nullptr, &headers, &header_block_fragment,
+                                     use_true_binary_metadata);
+    // build http2_frame_headers
+    // send frame
 }
 
 void http2_connection::received_header(std::shared_ptr<http2_stream> &stream, http2_frame_headers *frame) {
@@ -353,6 +393,9 @@ void http2_connection::received_settings(http2_frame_settings *frame) {
             continue;
         }
         _remote_settings[sid] = settings.value;
+        if (sid == HTTP2_SETTINGS_HEADER_TABLE_SIZE) {
+            hpack::compressor_set_max_table_size(&_send_record, settings.value);
+        }
     }
 
     http2_frame_settings settings_ack = build_http2_frame_settings_ack();

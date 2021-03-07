@@ -1,6 +1,6 @@
 {
     "editor.fontFamily": "Consolas, 'Courier New'",
-    "editor.fontSize": 17,
+    "editor.fontSize": 15,
     "editor.formatOnSave": true,
     "C_Cpp.clang_format_style": "file",
     "C_Cpp.clang_format_fallbackStyle": "Visual Studio"

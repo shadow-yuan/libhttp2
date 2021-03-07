@@ -121,6 +121,36 @@ slice encode_with_incremental_indexing(const mdelem_data &mdel) {
 }
 
 // 6.2.2 Literal Header Field without Indexing
+slice encode_without_indexing(const mdelem_data &mdel, uint32_t key_index) {
+    /*
+          0   1   2   3   4   5   6   7
+        +---+---+---+---+---+---+---+---+
+        | 0 | 0 | 0 | 0 |  Index (4+)   |
+        +---+---+-----------------------+
+        | H |     Value Length (7+)     |
+        +---+---------------------------+
+        | Value String (Length octets)  |
+        +-------------------------------+
+     */
+    size_t key_index_size = uint16_encode_length(key_index, INT_MASK(4));
+    size_t value_len_size = uint16_encode_length(mdel.value.size(), INT_MASK(7));
+    size_t bytes = key_index_size + value_len_size + mdel.value.size();
+    slice s = MakeSliceByLength(bytes);
+    uint8_t *buf = const_cast<uint8_t *>(s.data());
+
+    // key index
+    uint16_encode_impl(buf, key_index, INT_MASK(4));
+    buf += key_index_size;
+
+    // value length
+    uint16_encode_impl(buf, mdel.value.size(), INT_MASK(7));
+    buf += value_len_size;
+
+    // value
+    memcpy(buf, mdel.value.data(), mdel.value.size());
+    return s;
+}
+
 slice encode_without_indexing(const mdelem_data &mdel) {
     /*
           0   1   2   3   4   5   6   7

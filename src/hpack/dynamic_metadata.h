@@ -26,7 +26,6 @@ public:
     size_t entry_count();
     uint32_t max_table_size_limit();
     uint32_t max_table_size();
-    void roll_back(uint32_t count);
 
 private:
     void adjust_dynamic_table_size();

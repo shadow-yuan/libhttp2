@@ -29,9 +29,6 @@ public:
     virtual size_t entry_count() = 0;
     virtual uint32_t max_table_size_limit() = 0;
     virtual uint32_t max_table_size() = 0;
-
-    // remove newly added items
-    virtual void roll_back(uint32_t count) = 0;
 };
 
 /*
@@ -42,11 +39,12 @@ public:
 class send_record_service {
 public:
     virtual ~send_record_service() {}
-    virtual bool push_record(const mdelem_data &md) = 0;
-    virtual void roll_back(uint32_t count) = 0;
+
+    virtual bool get_record(size_t index, mdelem_data *mdel) = 0;
+    virtual void push_record(const mdelem_data &md) = 0;
+    virtual int32_t get_record_index(const mdelem_data &mdel) = 0;
     virtual bool check_record_exists(const mdelem_data &md) = 0;
 
-    // remove newly added items
     virtual uint32_t record_count() = 0;
 };
 
@@ -59,3 +57,4 @@ static inline bool operator==(const hpack::mdelem_data &md1, const hpack::mdelem
 }
 
 uint32_t mdelem_data_hash(const hpack::mdelem_data &);
+uint32_t mdelem_kv_hash(const slice &);

@@ -2,6 +2,7 @@
 #include <stdint.h>
 #include <memory>
 #include <map>
+#include <mutex>
 
 #include "http2/http2.h"
 
@@ -35,7 +36,7 @@ public:
 
     void send_goaway(uint32_t error_code, uint32_t last_stream_id = 0);
     int package_process(const uint8_t *data, uint32_t len);
-    void async_send_response(std::shared_ptr<http2_response> rsp);
+    // void async_send_response(std::shared_ptr<http2_response> rsp);
 
     inline uint32_t local_max_frame_size() const {
         return _local_settings[HTTP2_SETTINGS_MAX_FRAME_SIZE];
@@ -77,6 +78,10 @@ private:
     void send_http2_frame(http2_frame_goaway *);
     void send_http2_frame(http2_frame_window_update *);
 
+    void destroy_stream(uint32_t stream_id);
+    void end_of_stream(uint32_t stream_id);
+    void end_of_stream(std::shared_ptr<http2_stream> &stream);
+
 private:
     hpack::dynamic_metadata_table _dynamic_table;
     http2::TcpSendService *_sender_service;
@@ -94,7 +99,8 @@ private:
 
     std::map<uint32_t, std::shared_ptr<http2_stream>> _streams;
 
-    hpack::mdelem_send_record _send_record;
+    hpack::compressor _send_record;
+    std::mutex _mutex;
 
     uint32_t _received_goaway_stream_id;
     bool _received_goaway;

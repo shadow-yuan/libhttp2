@@ -24,6 +24,9 @@ uint32_t mdelem_data_hash(const hpack::mdelem_data &oth) {
     uint32_t hash = METADATA_KV_HASH(k_hash, v_hash);
     return hash;
 }
+uint32_t mdelem_kv_hash(const slice &kv) {
+    return get_slice_hash(kv);
+}
 
 namespace hpack {
 static_metadata::static_metadata(const slice &key, const slice &value, uint32_t idx)
@@ -167,4 +170,9 @@ uint32_t full_match_static_mdelem_index(const hpack::mdelem_data &mdel) {
         }
     }
     return 0;
+}
+
+bool check_key_exists(const slice &key) {
+    // TODO
+    return false;
 }
